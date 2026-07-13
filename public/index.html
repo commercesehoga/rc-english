@@ -5,13 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WonderMayank — Master RC, Grammar & Vocabulary</title>
 <meta name="description" content="Free daily Reading Comprehension, Grammar and Vocabulary practice for competitive exam aspirants, plus a weekly CBT test every Sunday.">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="favicon.svg">
+<link rel="apple-touch-icon" href="favicon.svg">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="WonderMayank">
+<meta property="og:url" content="https://english.thunderstudy.indevs.in/">
+<meta property="og:title" content="WonderMayank — Master RC, Grammar & Vocabulary">
+<meta property="og:description" content="Free daily Reading Comprehension, Grammar and Vocabulary practice for competitive exam aspirants, plus a weekly CBT test every Sunday.">
+<meta property="og:image" content="https://english.thunderstudy.indevs.in/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="WonderMayank — Master RC, Grammar & Vocabulary">
+<meta name="twitter:description" content="Free daily Reading Comprehension, Grammar and Vocabulary practice for competitive exam aspirants, plus a weekly CBT test every Sunday.">
+<meta name="twitter:image" content="https://english.thunderstudy.indevs.in/og-image.png">
+
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <nav class="navbar">
   <a href="index.html" class="brand">
-    <span class="brand-mark">W</span>
+    <img src="https://wondermayank.github.io/favicon.svg" alt="" class="brand-mark">
     Wonder<span class="accent">Mayank</span>
   </a>
   <div class="nav-links">
@@ -23,7 +41,7 @@
   </div>
   <div class="nav-cta">
     <span id="streak-badge" class="streak-badge"></span>
-    <div class="telegram-card" id="telegram-card" title="Sign in with Telegram to get your weekly score sent to @Tiny_english_robot"></div>
+    <div class="telegram-card" id="telegram-card"></div>
   </div>
 </nav>
 
@@ -137,25 +155,17 @@
   // NOTE for deploy: TELEGRAM_BOT_TOKEN must be set on the Worker with
   // `wrangler secret put TELEGRAM_BOT_TOKEN`, and the bot's domain must be
   // whitelisted via @BotFather → /setdomain → Tiny_english_robot → your live domain.
-
-  function onTelegramAuth(user) {
-    fetch('/api/auth/telegram', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(user),
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) { alert('Telegram sign-in failed: ' + data.error); return; }
-        WM.setTelegramUser(data.user);
-        renderTelegramCard();
-      })
-      .catch(err => alert('Telegram sign-in failed: ' + err.message));
-  }
+  //
+  // Sign-in opens /api/auth/telegram/start in a real new browser tab (full URL bar, no popup
+  // chrome), which 302-redirects straight to Telegram's own oauth.telegram.org page. Once
+  // approved, Telegram redirects that same tab to telegram-callback.html, which verifies the
+  // login (same /api/auth/telegram endpoint as before) and hands control back here.
 
   function renderTelegramCard() {
     const el = document.getElementById('telegram-card');
     const user = WM.getTelegramUser();
+    el.innerHTML = '';
+
     if (user) {
       el.innerHTML = `
         <div class="telegram-signed-in">
@@ -168,20 +178,62 @@
         WM.clearTelegramUser();
         renderTelegramCard();
       });
-    } else {
-      el.innerHTML = '';
-      const script = document.createElement('script');
-      script.async = true;
-      script.src = 'https://telegram.org/js/telegram-widget.js?22';
-      script.setAttribute('data-telegram-login', 'Tiny_english_robot');
-      script.setAttribute('data-size', 'medium');
-      script.setAttribute('data-radius', '10');
-      script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-      script.setAttribute('data-request-access', 'write');
-      el.appendChild(script);
+      return;
     }
+
+    el.innerHTML = `
+      <div class="telegram-login-wrap">
+        <button type="button" id="telegram-login-btn" class="telegram-login-btn" aria-haspopup="true" aria-expanded="false">
+          <svg class="tg-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11.5L20.5 4l-3 16-6-4.5-3 3-.5-5L20 6.5 6.5 13 3 11.5Z" fill="currentColor"/></svg>
+          Log in with Telegram
+          <svg class="tg-chevron" viewBox="0 0 12 8" fill="none" aria-hidden="true"><path d="M1 1.5 6 6.5 11 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="telegram-menu" id="telegram-menu" role="menu">
+          <button type="button" class="telegram-menu-item" id="telegram-browser-btn" role="menuitem">
+            <span class="tmi-icon">🌐</span>
+            <span><strong>Continue in browser</strong><small>Opens in a new tab</small></span>
+          </button>
+          <a class="telegram-menu-item" href="https://t.me/Tiny_english_robot" target="_blank" rel="noopener" role="menuitem">
+            <span class="tmi-icon">💬</span>
+            <span><strong>Open Telegram app</strong><small>Chat with the bot directly — no web login</small></span>
+          </a>
+        </div>
+      </div>
+    `;
+
+    const btn = document.getElementById('telegram-login-btn');
+    const menu = document.getElementById('telegram-menu');
+
+    function closeMenu() {
+      menu.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+    function toggleMenu() {
+      const open = menu.classList.toggle('open');
+      btn.setAttribute('aria-expanded', String(open));
+    }
+
+    btn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
+    document.addEventListener('click', closeMenu);
+
+    document.getElementById('telegram-browser-btn').addEventListener('click', () => {
+      closeMenu();
+      window.open('/api/auth/telegram/start', '_blank');
+    });
   }
   renderTelegramCard();
+
+  // Picks up the result the moment telegram-callback.html reports back via postMessage —
+  // works even though that tab closes itself, since the message fires just before it does.
+  window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+    if (event.data && event.data.source === 'wm-telegram-auth') {
+      renderTelegramCard();
+    }
+  });
+  // Fallback in case the callback tab couldn't reach back (e.g. popup blocked postMessage) —
+  // re-check sign-in state whenever this tab regains focus.
+  window.addEventListener('focus', renderTelegramCard);
 
   // ---------- Weekly 10-question topic picker ----------
 

@@ -73,6 +73,14 @@ async function handleApi(request, env, url) {
       return json(await handleTelegramAuth(env, request), headers);
     }
 
+    // Opened via window.open(..., '_blank') from the site — sends the browser straight to
+    // Telegram's full-page OAuth screen (embed=0) in that new tab, instead of the small popup
+    // the default telegram-widget.js opens. Telegram redirects back to telegram-callback.html
+    // with the signed user data once the person approves the login.
+    if (pathname === "/api/auth/telegram/start" && request.method === "GET") {
+      return startTelegramAuth(env, url);
+    }
+
     if (pathname === "/api/telegram/notify" && request.method === "POST") {
       return json(await handleTelegramNotify(env, request), headers);
     }
@@ -423,6 +431,26 @@ async function verifyTelegramAuth(data, botToken) {
   const hex = [...new Uint8Array(sigBuf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
   return hex === hash;
+}
+
+// Redirects straight to Telegram's real OAuth page (a genuine new browser tab, full URL bar
+// and all) instead of the small JS popup that the embedded telegram-widget.js normally opens.
+// bot_id is just the numeric prefix of the bot token (before the colon) — no extra secret needed.
+function startTelegramAuth(env, url) {
+  if (!env.TELEGRAM_BOT_TOKEN) {
+    return new Response("Telegram login isn't configured on the server yet.", { status: 500 });
+  }
+  const botId = env.TELEGRAM_BOT_TOKEN.split(":")[0];
+  const origin = url.origin;
+  const returnTo = `${origin}/telegram-callback.html`;
+
+  const authorizeUrl =
+    `https://oauth.telegram.org/auth?bot_id=${encodeURIComponent(botId)}` +
+    `&origin=${encodeURIComponent(origin)}` +
+    `&embed=0&request_access=write` +
+    `&return_to=${encodeURIComponent(returnTo)}`;
+
+  return Response.redirect(authorizeUrl, 302);
 }
 
 async function handleTelegramAuth(env, request) {

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Signing you in… — WonderMayank</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<style>
+  .cb-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px;
+  }
+  .cb-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    padding: 40px 32px;
+    max-width: 360px;
+    width: 100%;
+  }
+  .cb-spinner {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 3px solid var(--border);
+    border-top-color: var(--gold-deep);
+    margin: 0 auto 18px;
+    animation: cb-spin 0.8s linear infinite;
+  }
+  .cb-icon { font-size: 34px; margin-bottom: 12px; }
+  @keyframes cb-spin { to { transform: rotate(360deg); } }
+  .cb-title { font-family: var(--font-display); font-size: 19px; font-weight: 600; margin: 0 0 6px; }
+  .cb-sub { font-size: 13.5px; color: var(--text-muted); margin: 0; }
+  .cb-btn { margin-top: 18px; }
+</style>
+</head>
+<body>
+
+<div class="cb-wrap">
+  <div class="cb-card">
+    <div id="cb-spinner" class="cb-spinner"></div>
+    <div id="cb-icon" class="cb-icon" style="display:none;"></div>
+    <h1 id="cb-title" class="cb-title">Signing you in…</h1>
+    <p id="cb-sub" class="cb-sub">Confirming your Telegram login, one moment.</p>
+    <a id="cb-btn" href="index.html" class="btn btn-primary cb-btn" style="display:none;">Back to WonderMayank</a>
+  </div>
+</div>
+
+<script src="progress.js"></script>
+<script>
+  const params = Object.fromEntries(new URLSearchParams(window.location.search).entries());
+
+  function finish(ok, message) {
+    document.getElementById('cb-spinner').style.display = 'none';
+    document.getElementById('cb-icon').style.display = 'block';
+    document.getElementById('cb-icon').textContent = ok ? '✅' : '⚠️';
+    document.getElementById('cb-title').textContent = ok ? 'You\u2019re signed in!' : 'Sign-in failed';
+    document.getElementById('cb-sub').textContent = message;
+    document.getElementById('cb-btn').style.display = 'inline-flex';
+  }
+
+  function returnToSite(ok) {
+    // If this tab was opened via window.open() from the site, hand the result back
+    // instantly via postMessage and close this tab so the person lands right back
+    // where they started.
+    if (window.opener && !window.opener.closed) {
+      try {
+        window.opener.postMessage({ source: 'wm-telegram-auth', ok }, window.location.origin);
+      } catch (e) {}
+      setTimeout(() => window.close(), ok ? 600 : 0);
+    } else if (ok) {
+      // Opened as the only tab (e.g. desktop app handed off to browser) — just go home.
+      setTimeout(() => { window.location.href = 'index.html'; }, 900);
+    }
+  }
+
+  if (!params.id || !params.hash) {
+    finish(false, 'Telegram didn\u2019t send back any login data. Please try again.');
+  } else {
+    fetch('/api/auth/telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) { finish(false, data.error); returnToSite(false); return; }
+        WM.setTelegramUser(data.user);
+        finish(true, 'You can close this tab and head back to WonderMayank.');
+        returnToSite(true);
+      })
+      .catch((err) => {
+        finish(false, err.message || 'Something went wrong verifying your login.');
+        returnToSite(false);
+      });
+  }
+</script>
+
+</body>
+</html>
