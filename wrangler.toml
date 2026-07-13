@@ -15,7 +15,7 @@ not_found_handling = "404-page"
 [[d1_databases]]
 binding = "DB"
 database_name = "wondermayank-rc-db"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "b11509f7-cd13-4d8f-839c-ec7302e01e56"
 
 # Daily content generation. 30 0 * * * = 00:30 UTC = 6:00 AM IST.
 # Cloudflare cron always runs in UTC — this is the IST-adjusted equivalent.
