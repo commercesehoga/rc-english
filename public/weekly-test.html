@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Test — WonderMayank</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="brand"><span class="brand-mark">W</span>Wonder<span class="accent">Mayank</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="practice.html?cat=grammar">Grammar</a>
+    <a href="practice.html?cat=vocabulary">Vocabulary</a>
+    <a href="weekly-test.html" class="active">Weekly Test</a>
+  </div>
+  <div class="nav-cta"></div>
+</nav>
+
+<div id="root" class="wrap"></div>
+
+<script>
+const root = document.getElementById('root');
+let state = { screen: 'loading' };
+let testData = null;      // { weekStart, weekEnd, totalQuestions, questions }
+let answers = {};         // qid -> letter
+let marked = {};          // qid -> true
+let visited = {};         // qid -> true
+let currentIdx = 0;
+let timeLeft = 0;
+let timerInterval = null;
+
+function fmtTime(sec) {
+  sec = Math.max(0, sec);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+async function loadStatus() {
+  root.innerHTML = '<div class="loading-state">Checking this week\'s status…</div>';
+  const res = await fetch('/api/week/status');
+  const status = await res.json();
+  renderLocked(status);
+}
+
+function renderLocked(status) {
+  root.innerHTML = `
+    <div class="week-hero">
+      <span class="week-status-pill ${status.isSunday ? 'open' : 'closed'}">
+        ${status.isSunday ? 'Unlocked today' : 'Unlocks every Sunday'}
+      </span>
+      <h2>Week of ${status.weekStart} → ${status.weekEnd}</h2>
+      <p>${status.questionsThisWeek} questions collected so far this week.
+      ${status.isSunday
+        ? 'The full-week CBT test is ready to generate.'
+        : `Come back on <strong>${status.weekEnd}</strong> to take the full-week CBT test.`}</p>
+      <button id="gen-btn" class="btn btn-primary" ${status.isSunday ? '' : 'disabled'}>
+        ${status.testGenerated ? 'Open This Week\'s Test' : 'Generate Test'} <span class="icon-circle">→</span>
+      </button>
+    </div>
+  `;
+  const btn = document.getElementById('gen-btn');
+  if (status.isSunday) {
+    btn.addEventListener('click', generateAndStart);
+  }
+}
+
+async function generateAndStart() {
+  root.innerHTML = '<div class="loading-state">Building this week\'s test…</div>';
+  try {
+    const res = await fetch('/api/week/generate', { method: 'POST' });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    testData = data;
+    answers = {}; marked = {}; visited = {}; currentIdx = 0;
+    timeLeft = data.totalQuestions * 72; // ~1.2 min/question
+    startTest();
+  } catch (err) {
+    root.innerHTML = `<div class="empty-state">${err.message}</div>`;
+  }
+}
+
+function startTest() {
+  visited[testData.questions[0].id] = true;
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft <= 0) { clearInterval(timerInterval); submitTest(); }
+  }, 1000);
+  renderTest();
+}
+
+function updateTimerDisplay() {
+  const el = document.getElementById('cbt-timer');
+  if (!el) return;
+  el.textContent = fmtTime(timeLeft);
+  el.classList.toggle('low', timeLeft < 120);
+}
+
+function renderTest() {
+  const q = testData.questions[currentIdx];
+  visited[q.id] = true;
+
+  const navGrid = testData.questions.map((qq, i) => {
+    let cls = 'cbt-nav-btn';
+    if (i === currentIdx) cls += ' current';
+    else if (marked[qq.id]) cls += ' review';
+    else if (answers[qq.id]) cls += ' answered';
+    return `<button class="${cls}" data-idx="${i}">${i + 1}</button>`;
+  }).join('');
+
+  root.innerHTML = `
+    <div class="cbt-shell">
+      <div class="cbt-top">
+        <div><strong>Weekly CBT</strong> — ${testData.weekStart} to ${testData.weekEnd}</div>
+        <div class="cbt-timer" id="cbt-timer">${fmtTime(timeLeft)}</div>
+        <button class="btn btn-secondary" id="submit-btn" style="padding:8px 16px;">Submit</button>
+      </div>
+      <div class="cbt-body">
+        <div>
+          ${q.category === 'rc' && q.passage ? `<div class="passage-box"><h3>Passage</h3><p>${q.passage}</p></div>` : ''}
+          <div class="q-card">
+            <div class="q-meta">
+              <span class="q-chip">${q.category}</span>
+              <span class="q-chip">Q${currentIdx + 1} of ${testData.totalQuestions}</span>
+            </div>
+            <div class="q-text">${q.question}</div>
+            <div class="option-row">
+              ${['a','b','c','d'].map(l => `
+                <button class="option" data-letter="${l}" ${answers[q.id] === l ? 'style="border-color:var(--navy);"' : ''}>
+                  <span class="letter">${l.toUpperCase()}</span> ${q.options[l]}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+          <div class="cbt-footer">
+            <div style="display:flex; gap:10px;">
+              <button class="btn btn-ghost" id="prev-btn" ${currentIdx === 0 ? 'disabled' : ''}>← Previous</button>
+              <button class="btn btn-ghost" id="mark-btn">${marked[q.id] ? 'Unmark' : 'Mark for review'}</button>
+            </div>
+            <button class="btn btn-primary" id="next-btn" ${currentIdx === testData.questions.length - 1 ? 'disabled' : ''}>Next →</button>
+          </div>
+        </div>
+        <div class="cbt-nav-grid">${navGrid}</div>
+      </div>
+    </div>
+  `;
+
+  document.querySelectorAll('.cbt-body .option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      answers[q.id] = opt.dataset.letter;
+      renderTest();
+    });
+  });
+  document.getElementById('prev-btn').addEventListener('click', () => { currentIdx--; renderTest(); });
+  document.getElementById('next-btn').addEventListener('click', () => { currentIdx++; renderTest(); });
+  document.getElementById('mark-btn').addEventListener('click', () => { marked[q.id] = !marked[q.id]; renderTest(); });
+  document.getElementById('submit-btn').addEventListener('click', confirmSubmit);
+  document.querySelectorAll('.cbt-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => { currentIdx = parseInt(btn.dataset.idx, 10); renderTest(); });
+  });
+}
+
+function confirmSubmit() {
+  const unanswered = testData.questions.length - Object.keys(answers).length;
+  const msg = unanswered > 0
+    ? `You have ${unanswered} unanswered question(s). Submit anyway?`
+    : 'Submit the test?';
+  if (confirm(msg)) submitTest();
+}
+
+function submitTest() {
+  clearInterval(timerInterval);
+  let correct = 0, wrong = 0, unattempted = 0;
+  const byCategory = {};
+
+  testData.questions.forEach(q => {
+    byCategory[q.category] = byCategory[q.category] || { correct: 0, total: 0 };
+    byCategory[q.category].total++;
+    const given = answers[q.id];
+    if (!given) { unattempted++; return; }
+    if (given === q.correct) { correct++; byCategory[q.category].correct++; }
+    else wrong++;
+  });
+
+  const total = testData.totalQuestions;
+  const pct = total ? Math.round((correct / total) * 100) : 0;
+
+  root.innerHTML = `
+    <div class="cbt-shell">
+      <div class="result-summary">
+        <div style="font-size:13px; color:var(--text-muted); font-weight:600;">WEEKLY TEST RESULT</div>
+        <div class="result-score">${pct}%</div>
+        <div style="color:var(--text-muted);">${correct} correct out of ${total}</div>
+        <div class="result-grid">
+          <div class="cell"><div class="num" style="color:var(--green);">${correct}</div><div class="label">Correct</div></div>
+          <div class="cell"><div class="num" style="color:#C9503F;">${wrong}</div><div class="label">Wrong</div></div>
+          <div class="cell"><div class="num" style="color:var(--text-muted);">${unattempted}</div><div class="label">Skipped</div></div>
+        </div>
+      </div>
+      <div id="review-list"></div>
+    </div>
+  `;
+
+  const reviewList = document.getElementById('review-list');
+  reviewList.innerHTML = testData.questions.map((q, i) => {
+    const given = answers[q.id];
+    const isCorrect = given === q.correct;
+    return `
+      <div class="q-card">
+        <div class="q-meta">
+          <span class="q-chip">${q.category}</span>
+          <span class="q-chip">Q${i + 1}</span>
+        </div>
+        <div class="q-text">${q.question}</div>
+        <div class="option-row">
+          ${['a','b','c','d'].map(l => {
+            let cls = 'option';
+            if (l === q.correct) cls += ' correct';
+            else if (l === given && !isCorrect) cls += ' wrong';
+            return `<div class="${cls}"><span class="letter">${l.toUpperCase()}</span> ${q.options[l]}</div>`;
+          }).join('')}
+        </div>
+        <div class="explanation show">${q.explanation || ''} ${!given ? '<br><em>Not attempted.</em>' : ''}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+loadStatus();
+</script>
+
+</body>
+</html>

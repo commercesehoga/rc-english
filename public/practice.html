@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Practice — WonderMayank</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="brand"><span class="brand-mark">W</span>Wonder<span class="accent">Mayank</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="practice.html?cat=grammar">Grammar</a>
+    <a href="practice.html?cat=vocabulary">Vocabulary</a>
+    <a href="weekly-test.html">Weekly Test</a>
+  </div>
+  <div class="nav-cta"></div>
+</nav>
+
+<div class="page-header">
+  <span class="eyebrow-label">Daily Practice</span>
+  <h2 class="section-title" id="page-title">Reading Comprehension</h2>
+
+  <div class="category-tabs">
+    <button class="tab-btn" data-cat="rc">Reading Comprehension</button>
+    <button class="tab-btn" data-cat="grammar">Grammar</button>
+    <button class="tab-btn" data-cat="vocabulary">Vocabulary</button>
+  </div>
+
+  <div class="date-nav">
+    <button id="prev-day" title="Previous available day">←</button>
+    <span class="today-label" id="date-label">Today</span>
+    <select id="day-picker"></select>
+    <button id="next-day" title="Next available day">→</button>
+    <button id="today-btn" class="btn-ghost" style="border-radius:8px;">Today</button>
+  </div>
+</div>
+
+<div class="wrap" id="content-area">
+  <div class="loading-state">Loading today's questions…</div>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+let currentCat = params.get('cat') || 'rc';
+let currentDate = params.get('date') || null; // null = today
+let availableDays = [];
+
+const titleMap = { rc: 'Reading Comprehension', grammar: 'Grammar', vocabulary: 'Vocabulary' };
+
+function setActiveTab() {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === currentCat));
+  document.getElementById('page-title').textContent = titleMap[currentCat];
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => { currentCat = btn.dataset.cat; setActiveTab(); render(); });
+});
+
+document.getElementById('today-btn').addEventListener('click', () => { currentDate = null; render(); });
+
+document.getElementById('day-picker').addEventListener('change', (e) => {
+  currentDate = e.target.value || null;
+  render();
+});
+
+document.getElementById('prev-day').addEventListener('click', () => {
+  const idx = currentDate ? availableDays.indexOf(currentDate) : -1;
+  const list = availableDays; // newest first
+  const pos = idx === -1 ? 0 : idx;
+  if (pos + 1 < list.length) { currentDate = list[pos + 1]; render(); }
+});
+document.getElementById('next-day').addEventListener('click', () => {
+  const idx = currentDate ? availableDays.indexOf(currentDate) : -1;
+  if (idx > 0) { currentDate = availableDays[idx - 1]; render(); }
+  else if (idx === 0) { currentDate = null; render(); } // back to today
+});
+
+async function loadDays() {
+  const res = await fetch('/api/days');
+  const data = await res.json();
+  availableDays = (data.days || []).map(d => d.date);
+  const picker = document.getElementById('day-picker');
+  picker.innerHTML = '<option value="">Today</option>' + availableDays.map(d => `<option value="${d}">${d}</option>`).join('');
+}
+
+function optionCard(q, idx) {
+  const letters = ['a', 'b', 'c', 'd'];
+  return `
+    <div class="q-card" data-qid="${q.id}">
+      <div class="q-meta">
+        ${q.topic ? `<span class="q-chip">${q.topic}</span>` : ''}
+        ${q.difficulty ? `<span class="q-chip">${q.difficulty}</span>` : ''}
+      </div>
+      <div class="q-text">${idx + 1}. ${q.question}</div>
+      <div class="option-row">
+        ${letters.map(l => `
+          <button class="option" data-letter="${l}" data-correct="${q.correct}">
+            <span class="letter">${l.toUpperCase()}</span> ${q.options[l]}
+          </button>
+        `).join('')}
+      </div>
+      <div class="explanation">${q.explanation || ''}</div>
+    </div>
+  `;
+}
+
+function attachOptionHandlers() {
+  document.querySelectorAll('.q-card').forEach(card => {
+    const options = card.querySelectorAll('.option');
+    options.forEach(opt => {
+      opt.addEventListener('click', () => {
+        if (card.dataset.answered) return;
+        card.dataset.answered = '1';
+        const correct = opt.dataset.correct;
+        options.forEach(o => {
+          if (o.dataset.letter === correct) o.classList.add('correct');
+          else if (o === opt) o.classList.add('wrong');
+        });
+        card.querySelector('.explanation').classList.add('show');
+      });
+    });
+  });
+}
+
+async function render() {
+  setActiveTab();
+  const area = document.getElementById('content-area');
+  area.innerHTML = '<div class="loading-state">Loading questions…</div>';
+  document.getElementById('date-label').textContent = currentDate ? currentDate : 'Today';
+
+  try {
+    const url = currentDate ? `/api/day/${currentDate}` : '/api/today';
+    const res = await fetch(url);
+    const data = await res.json();
+
+    let html = '';
+    if (currentCat === 'rc') {
+      if (data.rc.passage) {
+        html += `<div class="passage-box"><h3>Today's Passage</h3><p>${data.rc.passage}</p></div>`;
+      }
+      if (!data.rc.questions.length) {
+        html += `<div class="empty-state">No RC set for ${data.date} yet.</div>`;
+      } else {
+        html += data.rc.questions.map(optionCard).join('');
+      }
+    } else {
+      const list = data[currentCat] || [];
+      if (!list.length) {
+        html += `<div class="empty-state">No ${titleMap[currentCat]} questions for ${data.date} yet.</div>`;
+      } else {
+        html += list.map(optionCard).join('');
+      }
+    }
+    area.innerHTML = html;
+    attachOptionHandlers();
+  } catch (err) {
+    area.innerHTML = `<div class="empty-state">Couldn't load questions. ${err.message}</div>`;
+  }
+}
+
+(async function init() {
+  await loadDays();
+  if (params.get('view') === 'archive' && availableDays.length) {
+    // Land on the most recent *past* day rather than today, since this link
+    // is specifically "browse old passages".
+    const todayStr = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const pastDays = availableDays.filter(d => d !== todayStr);
+    currentDate = pastDays.length ? pastDays[0] : availableDays[0];
+  }
+  render();
+})();
+</script>
+
+</body>
+</html>

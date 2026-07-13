@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WonderMayank — Master RC, Grammar & Vocabulary</title>
+<meta name="description" content="Free daily Reading Comprehension, Grammar and Vocabulary practice for competitive exam aspirants, plus a weekly CBT test every Sunday.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="brand">
+    <span class="brand-mark">W</span>
+    Wonder<span class="accent">Mayank</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html" class="active">Home</a>
+    <a href="practice.html?cat=grammar">Grammar</a>
+    <a href="practice.html?cat=vocabulary">Vocabulary</a>
+    <a href="weekly-test.html">Weekly Test</a>
+  </div>
+  <div class="nav-cta">
+    <a href="practice.html" class="btn btn-primary">
+      Start Learning <span class="icon-circle">→</span>
+    </a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div>
+    <span class="eyebrow">★ Master. Practice. Achieve.</span>
+    <h1 class="hero-title">Master <span class="accent">RC</span>,<br>Grammar &amp; Vocabulary</h1>
+    <p class="hero-sub">Free daily Reading Comprehension, Grammar and Vocabulary practice — a fresh set every day, plus a full CBT-style test every Sunday covering the whole week.</p>
+    <div class="hero-actions">
+      <a href="practice.html" class="btn btn-primary">Start Learning <span class="icon-circle">→</span></a>
+      <a href="#topics" class="btn btn-secondary">Explore Topics</a>
+    </div>
+    <div class="hero-features">
+      <div class="hero-feature"><span class="dot">🤖</span><div><strong>AI Generated</strong><span>Fresh daily</span></div></div>
+      <div class="hero-feature"><span class="dot">📈</span><div><strong>Track Progress</strong><span>Day by day</span></div></div>
+      <div class="hero-feature"><span class="dot">🗓️</span><div><strong>Weekly Test</strong><span>Every Sunday</span></div></div>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <img src="book.png" alt="Illustrated open book reading Learn. Practice. Excel.">
+  </div>
+</section>
+
+<div class="stats-bar wrap">
+  <div class="stat"><span class="dot">📚</span><div><div class="stat-num" id="stat-days">—</div><div class="stat-label">Days of Practice</div></div></div>
+  <div class="stat"><span class="dot">✏️</span><div><div class="stat-num" id="stat-questions">—</div><div class="stat-label">Practice Questions</div></div></div>
+  <div class="stat"><span class="dot">🗓️</span><div><div class="stat-num">Sunday</div><div class="stat-label">Weekly Test Day</div></div></div>
+  <div class="stat"><span class="dot">🆓</span><div><div class="stat-num">Free</div><div class="stat-label">Always</div></div></div>
+</div>
+
+<div class="wrap" id="topics">
+  <div class="section-head">
+    <div>
+      <span class="eyebrow-label">Choose a topic</span>
+      <h2 class="section-title">Learn. Practice. Improve.</h2>
+      <p class="section-desc">A new set drops every morning. Pick a topic to begin today's practice.</p>
+    </div>
+  </div>
+
+  <div class="topic-grid">
+    <a href="practice.html?cat=rc" class="topic-card rc">
+      <div class="topic-icon">📖</div>
+      <span class="topic-tag">RC</span>
+      <h3>Reading Comprehension</h3>
+      <p>A new passage and 5 questions every day — inference, tone, theme and detail.</p>
+      <button class="topic-go">→</button>
+    </a>
+
+    <a href="practice.html?cat=grammar" class="topic-card grammar">
+      <div class="topic-icon">✒️</div>
+      <span class="topic-tag">Grammar</span>
+      <h3>Grammar</h3>
+      <p>Tenses, subject-verb agreement, voice, speech, articles &amp; prepositions.</p>
+      <button class="topic-go">→</button>
+    </a>
+
+    <a href="practice.html?cat=vocabulary" class="topic-card vocab">
+      <div class="topic-icon">📗</div>
+      <span class="topic-tag">Vocabulary</span>
+      <h3>Vocabulary</h3>
+      <p>Synonyms, antonyms, idioms, one-word substitution and spelling.</p>
+      <button class="topic-go">→</button>
+    </a>
+
+    <a href="practice.html?cat=rc&view=archive" class="topic-card passages">
+      <div class="topic-icon">📄</div>
+      <span class="topic-tag">Passages</span>
+      <h3>Passage Archive</h3>
+      <p>Browse every past RC passage and re-attempt any day you missed.</p>
+      <button class="topic-go">→</button>
+    </a>
+  </div>
+</div>
+
+<div class="footer-strip wrap">
+  <div class="item"><span class="dot">🎯</span><div><strong>Exam Focused</strong><span>SSC, CUET, Banking &amp; more</span></div></div>
+  <div class="item"><span class="dot">💡</span><div><strong>Explained Answers</strong><span>Understand every question</span></div></div>
+  <div class="item"><span class="dot">⏱️</span><div><strong>5 Minutes a Day</strong><span>Fits any schedule</span></div></div>
+  <div class="item"><span class="dot">🏆</span><div><strong>Weekly CBT</strong><span>Test yourself every Sunday</span></div></div>
+</div>
+
+<script>
+  fetch('/api/days').then(r => r.json()).then(d => {
+    const days = d.days || [];
+    document.getElementById('stat-days').textContent = days.length;
+    document.getElementById('stat-questions').textContent = days.reduce((a, b) => a + b.count, 0);
+  }).catch(() => {});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,23 @@
+name = "wondermayank-rc"
+main = "worker/index.js"
+compatibility_date = "2026-07-01"
+
+# Static frontend (public/index.html, practice.html, weekly-test.html, style.css, book.png)
+# Served directly by Cloudflare — requests that don't match a file fall through to the Worker below.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "404-page"
+
+# D1 database — create this first with:
+#   npx wrangler d1 create wondermayank-rc-db
+# then paste the database_id it prints into database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "wondermayank-rc-db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+# Daily content generation. 30 0 * * * = 00:30 UTC = 6:00 AM IST.
+# Cloudflare cron always runs in UTC — this is the IST-adjusted equivalent.
+[triggers]
+crons = ["30 0 * * *"]
