@@ -467,31 +467,35 @@ h1.hero-title .accent { color: var(--gold-deep); }
 }
 .streak-badge:empty { display: none; margin-right: 0; }
 
-/* ---------- Telegram sign-in ---------- */
-
-#telegram-panel {
-  margin: 8px auto 32px;
-}
+/* ---------- Telegram sign-in (compact, lives in the navbar) ---------- */
 
 .telegram-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 20px;
   display: flex;
   align-items: center;
-  min-height: 44px;
+  min-height: 36px;
 }
 
 .telegram-signed-in {
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
+  gap: 6px;
+  background: var(--cream-deep);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 8px 5px 5px;
 }
-.telegram-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-.telegram-username { display: block; font-size: 13px; color: var(--text-muted); }
-.telegram-signed-in .btn-ghost { margin-left: auto; }
+.telegram-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.telegram-name { font-size: 13px; font-weight: 600; }
+.telegram-logout-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 50%;
+}
+.telegram-logout-btn:hover { background: var(--border); color: var(--navy); }
 
 /* ---------- Weekly topic picker ---------- */
 

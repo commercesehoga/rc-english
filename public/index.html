@@ -23,22 +23,9 @@
   </div>
   <div class="nav-cta">
     <span id="streak-badge" class="streak-badge"></span>
-    <a href="practice.html" class="btn btn-primary">
-      Start Learning <span class="icon-circle">→</span>
-    </a>
+    <div class="telegram-card" id="telegram-card" title="Sign in with Telegram to get your weekly score sent to @Tiny_english_robot"></div>
   </div>
 </nav>
-
-<div class="wrap" id="telegram-panel">
-  <div class="section-head">
-    <div>
-      <span class="eyebrow-label">Optional</span>
-      <h2 class="section-title">Sign in with Telegram</h2>
-      <p class="section-desc">Sign in to get your weekly score card sent straight to <a href="https://t.me/Tiny_english_robot" target="_blank" rel="noopener">@Tiny_english_robot</a> on Telegram.</p>
-    </div>
-  </div>
-  <div class="telegram-card" id="telegram-card"></div>
-</div>
 
 <section class="hero">
   <div>
@@ -173,11 +160,8 @@
       el.innerHTML = `
         <div class="telegram-signed-in">
           ${user.photo_url ? `<img src="${user.photo_url}" alt="" class="telegram-avatar">` : ''}
-          <div>
-            <strong>${user.first_name || 'Signed in'}</strong>
-            ${user.username ? `<span class="telegram-username">@${user.username}</span>` : ''}
-          </div>
-          <button id="telegram-logout-btn" class="btn-ghost" style="border-radius:8px;">Sign out</button>
+          <span class="telegram-name">${user.first_name || 'Signed in'}</span>
+          <button id="telegram-logout-btn" class="telegram-logout-btn" title="Sign out" aria-label="Sign out">×</button>
         </div>
       `;
       document.getElementById('telegram-logout-btn').addEventListener('click', () => {
@@ -190,7 +174,7 @@
       script.async = true;
       script.src = 'https://telegram.org/js/telegram-widget.js?22';
       script.setAttribute('data-telegram-login', 'Tiny_english_robot');
-      script.setAttribute('data-size', 'large');
+      script.setAttribute('data-size', 'medium');
       script.setAttribute('data-radius', '10');
       script.setAttribute('data-onauth', 'onTelegramAuth(user)');
       script.setAttribute('data-request-access', 'write');
