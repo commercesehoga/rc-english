@@ -19,8 +19,10 @@
     <a href="practice.html?cat=grammar">Grammar</a>
     <a href="practice.html?cat=vocabulary">Vocabulary</a>
     <a href="weekly-test.html">Weekly Test</a>
+    <a href="mistakes.html">Review Mistakes</a>
   </div>
   <div class="nav-cta">
+    <span id="streak-badge" class="streak-badge"></span>
     <a href="practice.html" class="btn btn-primary">
       Start Learning <span class="icon-circle">→</span>
     </a>
@@ -98,6 +100,35 @@
   </div>
 </div>
 
+<div class="wrap" id="telegram-panel">
+  <div class="section-head">
+    <div>
+      <span class="eyebrow-label">Optional</span>
+      <h2 class="section-title">Sign in with Telegram</h2>
+      <p class="section-desc">Sign in to get your weekly score card sent straight to <a href="https://t.me/Thunderstudy_eng_robot" target="_blank" rel="noopener">@Thunderstudy_eng_robot</a> on Telegram.</p>
+    </div>
+  </div>
+  <div class="telegram-card" id="telegram-card"></div>
+</div>
+
+<div class="wrap" id="topics-weekly">
+  <div class="section-head">
+    <div>
+      <span class="eyebrow-label">Once a week</span>
+      <h2 class="section-title">Build Your Own 10-Question Set</h2>
+      <p class="section-desc">Pick up to 10 topics to focus on. This resets every Monday.</p>
+    </div>
+  </div>
+  <div class="topic-picker-card">
+    <div id="topic-checklist" class="topic-checklist"></div>
+    <div class="topic-picker-footer">
+      <span id="topic-picker-status" class="topic-picker-status"></span>
+      <button id="start-custom-btn" class="btn btn-primary">Start Practice <span class="icon-circle">→</span></button>
+    </div>
+  </div>
+  <div id="custom-quiz-area"></div>
+</div>
+
 <div class="footer-strip wrap">
   <div class="item"><span class="dot">🎯</span><div><strong>Exam Focused</strong><span>SSC, CUET, Banking &amp; more</span></div></div>
   <div class="item"><span class="dot">💡</span><div><strong>Explained Answers</strong><span>Understand every question</span></div></div>
@@ -105,12 +136,171 @@
   <div class="item"><span class="dot">🏆</span><div><strong>Weekly CBT</strong><span>Test yourself every Sunday</span></div></div>
 </div>
 
+<script src="progress.js"></script>
 <script>
   fetch('/api/days').then(r => r.json()).then(d => {
     const days = d.days || [];
     document.getElementById('stat-days').textContent = days.length;
     document.getElementById('stat-questions').textContent = days.reduce((a, b) => a + b.count, 0);
   }).catch(() => {});
+
+  document.getElementById('streak-badge').textContent = WM.currentStreak() > 0 ? `\u{1F525} ${WM.currentStreak()} day streak` : '';
+
+  // ---------- Telegram sign-in ----------
+  // NOTE for deploy: TELEGRAM_BOT_TOKEN must be set on the Worker with
+  // `wrangler secret put TELEGRAM_BOT_TOKEN`, and the bot's domain must be
+  // whitelisted via @BotFather → /setdomain → Thunderstudy_eng_robot → your live domain.
+
+  function onTelegramAuth(user) {
+    fetch('/api/auth/telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { alert('Telegram sign-in failed: ' + data.error); return; }
+        WM.setTelegramUser(data.user);
+        renderTelegramCard();
+      })
+      .catch(err => alert('Telegram sign-in failed: ' + err.message));
+  }
+
+  function renderTelegramCard() {
+    const el = document.getElementById('telegram-card');
+    const user = WM.getTelegramUser();
+    if (user) {
+      el.innerHTML = `
+        <div class="telegram-signed-in">
+          ${user.photo_url ? `<img src="${user.photo_url}" alt="" class="telegram-avatar">` : ''}
+          <div>
+            <strong>${user.first_name || 'Signed in'}</strong>
+            ${user.username ? `<span class="telegram-username">@${user.username}</span>` : ''}
+          </div>
+          <button id="telegram-logout-btn" class="btn-ghost" style="border-radius:8px;">Sign out</button>
+        </div>
+      `;
+      document.getElementById('telegram-logout-btn').addEventListener('click', () => {
+        WM.clearTelegramUser();
+        renderTelegramCard();
+      });
+    } else {
+      el.innerHTML = '';
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://telegram.org/js/telegram-widget.js?22';
+      script.setAttribute('data-telegram-login', 'Thunderstudy_eng_robot');
+      script.setAttribute('data-size', 'large');
+      script.setAttribute('data-radius', '10');
+      script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+      script.setAttribute('data-request-access', 'write');
+      el.appendChild(script);
+    }
+  }
+  renderTelegramCard();
+
+  // ---------- Weekly 10-question topic picker ----------
+
+  const TOPIC_LIST = [
+    'Parts of Speech', 'Tenses', 'Subject-Verb Agreement', 'Active & Passive Voice',
+    'Direct & Indirect Speech', 'Articles & Prepositions', 'Error Spotting',
+    'Synonyms', 'Antonyms', 'Idioms & Phrases', 'One-Word Substitution', 'Spelling Correction',
+    'inference', 'tone', 'theme', 'vocabulary', 'detail',
+  ];
+  const MAX_TOPICS = 10;
+  let selectedTopics = [];
+
+  function renderTopicChecklist() {
+    const el = document.getElementById('topic-checklist');
+    const available = WM.canDoCustomPracticeThisWeek();
+    el.innerHTML = TOPIC_LIST.map(t => `
+      <label class="topic-check">
+        <input type="checkbox" value="${t}" ${!available ? 'disabled' : ''}>
+        <span>${t}</span>
+      </label>
+    `).join('');
+    el.querySelectorAll('input').forEach(cb => {
+      cb.addEventListener('change', () => {
+        selectedTopics = [...el.querySelectorAll('input:checked')].map(x => x.value);
+        if (selectedTopics.length > MAX_TOPICS) {
+          cb.checked = false;
+          selectedTopics = selectedTopics.slice(0, MAX_TOPICS);
+        }
+        updateTopicStatus();
+      });
+    });
+    document.getElementById('start-custom-btn').disabled = !available;
+    updateTopicStatus();
+  }
+
+  function updateTopicStatus() {
+    const status = document.getElementById('topic-picker-status');
+    status.textContent = WM.canDoCustomPracticeThisWeek()
+      ? `${selectedTopics.length} / ${MAX_TOPICS} topics selected`
+      : "You've already used this week's set — come back next Monday.";
+  }
+
+  document.getElementById('start-custom-btn').addEventListener('click', async () => {
+    if (!selectedTopics.length) { alert('Select at least one topic.'); return; }
+    if (!WM.canDoCustomPracticeThisWeek()) { alert("You've already used this week's practice set."); return; }
+    const area = document.getElementById('custom-quiz-area');
+    area.innerHTML = '<div class="loading-state">Building your set…</div>';
+    try {
+      const res = await fetch('/api/practice/custom?topics=' + encodeURIComponent(selectedTopics.join(',')));
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      WM.markCustomPracticeDone();
+      renderCustomQuiz(data.questions);
+      renderTopicChecklist();
+    } catch (err) {
+      area.innerHTML = `<div class="empty-state">${err.message}</div>`;
+    }
+  });
+
+  function renderCustomQuiz(questions) {
+    const area = document.getElementById('custom-quiz-area');
+    area.innerHTML = questions.map((q, i) => `
+      <div class="q-card" data-qid="${q.id}">
+        ${q.passage ? `<div class="passage-box"><h3>Passage</h3><p>${q.passage}</p></div>` : ''}
+        <div class="q-meta">
+          ${q.topic ? `<span class="q-chip">${q.topic}</span>` : ''}
+          <span class="q-chip">${q.category}</span>
+        </div>
+        <div class="q-text">${i + 1}. ${q.question}</div>
+        <div class="option-row">
+          ${['a', 'b', 'c', 'd'].map(l => `
+            <button class="option" data-letter="${l}" data-correct="${q.correct}">
+              <span class="letter">${l.toUpperCase()}</span> ${q.options[l]}
+            </button>
+          `).join('')}
+        </div>
+        <div class="explanation">${q.explanation || ''}</div>
+      </div>
+    `).join('');
+
+    const byId = Object.fromEntries(questions.map(q => [String(q.id), q]));
+    area.querySelectorAll('.q-card').forEach(card => {
+      const opts = card.querySelectorAll('.option');
+      opts.forEach(opt => {
+        opt.addEventListener('click', () => {
+          if (card.dataset.answered) return;
+          card.dataset.answered = '1';
+          const correct = opt.dataset.correct;
+          opts.forEach(o => {
+            if (o.dataset.letter === correct) o.classList.add('correct');
+            else if (o === opt) o.classList.add('wrong');
+          });
+          card.querySelector('.explanation').classList.add('show');
+          if (opt.dataset.letter !== correct) {
+            const q = byId[card.dataset.qid];
+            WM.saveMistake(q, opt.dataset.letter, q.date, q.category);
+          }
+        });
+      });
+    });
+  }
+
+  renderTopicChecklist();
 </script>
 
 </body>

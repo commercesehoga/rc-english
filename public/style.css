@@ -452,3 +452,88 @@ h1.hero-title .accent { color: var(--gold-deep); }
   .cbt-body { grid-template-columns: 1fr; }
   .cbt-nav-grid { position: static; grid-template-columns: repeat(8, 1fr); }
 }
+
+/* ---------- Streak badge ---------- */
+
+.streak-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  background: var(--gold-soft);
+  padding: 6px 12px;
+  border-radius: 999px;
+  margin-right: 4px;
+  display: inline-block;
+}
+.streak-badge:empty { display: none; margin-right: 0; }
+
+/* ---------- Telegram sign-in ---------- */
+
+.telegram-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.telegram-signed-in {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.telegram-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.telegram-username { display: block; font-size: 13px; color: var(--text-muted); }
+.telegram-signed-in .btn-ghost { margin-left: auto; }
+
+/* ---------- Weekly topic picker ---------- */
+
+.topic-picker-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+}
+
+.topic-checklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.topic-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cream-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.topic-check input:disabled + span { color: var(--text-muted); }
+
+.topic-picker-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.topic-picker-status { font-size: 13px; color: var(--text-muted); }
+
+/* ---------- Weekly test result actions ---------- */
+
+.result-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}

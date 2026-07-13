@@ -15,8 +15,9 @@
     <a href="practice.html?cat=grammar">Grammar</a>
     <a href="practice.html?cat=vocabulary">Vocabulary</a>
     <a href="weekly-test.html">Weekly Test</a>
+    <a href="mistakes.html">Review Mistakes</a>
   </div>
-  <div class="nav-cta"></div>
+  <div class="nav-cta"><span id="streak-badge" class="streak-badge"></span></div>
 </nav>
 
 <div class="page-header">
@@ -42,7 +43,10 @@
   <div class="loading-state">Loading today's questions…</div>
 </div>
 
+<script src="progress.js"></script>
 <script>
+document.getElementById('streak-badge').textContent = WM.currentStreak() > 0 ? `\u{1F525} ${WM.currentStreak()} day streak` : '';
+
 const params = new URLSearchParams(location.search);
 let currentCat = params.get('cat') || 'rc';
 let currentDate = params.get('date') || null; // null = today
@@ -107,8 +111,9 @@ function optionCard(q, idx) {
   `;
 }
 
-function attachOptionHandlers() {
-  document.querySelectorAll('.q-card').forEach(card => {
+function attachOptionHandlers(questionsById, dateForCompletion, categoryForCompletion) {
+  const cards = document.querySelectorAll('.q-card');
+  cards.forEach(card => {
     const options = card.querySelectorAll('.option');
     options.forEach(opt => {
       opt.addEventListener('click', () => {
@@ -120,6 +125,18 @@ function attachOptionHandlers() {
           else if (o === opt) o.classList.add('wrong');
         });
         card.querySelector('.explanation').classList.add('show');
+
+        const letter = opt.dataset.letter;
+        if (letter !== correct) {
+          const q = questionsById[card.dataset.qid];
+          if (q) WM.saveMistake(q, letter, dateForCompletion, categoryForCompletion);
+        }
+
+        const allAnswered = [...cards].every(c => c.dataset.answered);
+        if (allAnswered) {
+          WM.markCategoryDone(dateForCompletion, categoryForCompletion);
+          document.getElementById('streak-badge').textContent = WM.currentStreak() > 0 ? `\u{1F525} ${WM.currentStreak()} day streak` : '';
+        }
       });
     });
   });
@@ -137,17 +154,19 @@ async function render() {
     const data = await res.json();
 
     let html = '';
+    let list = [];
     if (currentCat === 'rc') {
+      list = data.rc.questions;
       if (data.rc.passage) {
         html += `<div class="passage-box"><h3>Today's Passage</h3><p>${data.rc.passage}</p></div>`;
       }
-      if (!data.rc.questions.length) {
+      if (!list.length) {
         html += `<div class="empty-state">No RC set for ${data.date} yet.</div>`;
       } else {
-        html += data.rc.questions.map(optionCard).join('');
+        html += list.map(optionCard).join('');
       }
     } else {
-      const list = data[currentCat] || [];
+      list = data[currentCat] || [];
       if (!list.length) {
         html += `<div class="empty-state">No ${titleMap[currentCat]} questions for ${data.date} yet.</div>`;
       } else {
@@ -155,7 +174,8 @@ async function render() {
       }
     }
     area.innerHTML = html;
-    attachOptionHandlers();
+    const questionsById = Object.fromEntries(list.map(q => [String(q.id), { ...q, category: currentCat }]));
+    attachOptionHandlers(questionsById, data.date, currentCat);
   } catch (err) {
     area.innerHTML = `<div class="empty-state">Couldn't load questions. ${err.message}</div>`;
   }

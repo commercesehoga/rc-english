@@ -28,3 +28,14 @@ CREATE TABLE IF NOT EXISTS weekly_tests (
   question_ids  TEXT NOT NULL,          -- JSON array of daily_content.id, pre-shuffled
   generated_at  TEXT DEFAULT (datetime('now'))
 );
+
+-- Telegram "Sign in with Telegram" users — created/updated by /api/auth/telegram
+-- after verifying the widget's signed payload against TELEGRAM_BOT_TOKEN.
+CREATE TABLE IF NOT EXISTS users (
+  telegram_id  INTEGER PRIMARY KEY,     -- Telegram numeric user id
+  username     TEXT,
+  first_name   TEXT,
+  photo_url    TEXT,
+  created_at   TEXT DEFAULT (datetime('now')),
+  last_seen_at TEXT DEFAULT (datetime('now'))
+);

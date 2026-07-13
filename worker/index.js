@@ -56,6 +56,27 @@ async function handleApi(request, env, url) {
       return json(await getWeeklyTest(env, weekMatch[1]), headers);
     }
 
+    if (pathname === "/api/practice/custom" && request.method === "GET") {
+      const topics = (url.searchParams.get("topics") || "")
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .slice(0, 10);
+      return json(await getCustomPractice(env, topics), headers);
+    }
+
+    if (pathname === "/api/auth/telegram" && request.method === "POST") {
+      return json(await handleTelegramAuth(env, request), headers);
+    }
+
+    if (pathname === "/api/telegram/notify" && request.method === "POST") {
+      return json(await handleTelegramNotify(env, request), headers);
+    }
+
+    if (pathname === "/api/telegram/send-pdf" && request.method === "POST") {
+      return json(await handleTelegramSendPdf(env, request), headers);
+    }
+
     return json({ error: "Not found" }, headers, 404);
   } catch (err) {
     return json({ error: err.message || "Server error" }, headers, 500);
@@ -336,6 +357,123 @@ async function getWeeklyTest(env, weekStart) {
     .first();
   if (!existing) throw new Error("No test found for that week.");
   return buildWeeklyTestPayload(env, weekStart, existing.week_end, JSON.parse(existing.question_ids));
+}
+
+// ---------- weekly topic-picker practice (up to 10 topics, 10 questions, pulled from the full archive) ----------
+
+async function getCustomPractice(env, topics) {
+  if (!topics.length) throw new Error("Select at least one topic.");
+  const placeholders = topics.map(() => "?").join(",");
+  const rows = await env.DB.prepare(
+    `SELECT id, category, passage, question, option_a, option_b, option_c, option_d, correct_option, explanation, topic_tag, difficulty, date
+     FROM daily_content WHERE topic_tag IN (${placeholders}) ORDER BY RANDOM() LIMIT 10`
+  )
+    .bind(...topics)
+    .all();
+
+  const questions = (rows.results || []).map((r) => ({
+    id: r.id,
+    date: r.date,
+    category: r.category,
+    passage: r.category === "rc" ? r.passage : null,
+    question: r.question,
+    options: { a: r.option_a, b: r.option_b, c: r.option_c, d: r.option_d },
+    correct: r.correct_option,
+    explanation: r.explanation,
+    topic: r.topic_tag,
+    difficulty: r.difficulty,
+  }));
+
+  if (!questions.length) {
+    throw new Error("No archived questions match those topics yet — check back after a few more days of content.");
+  }
+  return { topics, totalQuestions: questions.length, questions };
+}
+
+// ---------- Telegram sign-in + bot delivery ----------
+// TELEGRAM_BOT_TOKEN must be set with `wrangler secret put TELEGRAM_BOT_TOKEN` — never hardcode it here.
+// The Login Widget signs its payload with this same token, so this one secret covers both login
+// verification and sending messages/documents (Telegram doesn't use separate client id/secret pairs).
+
+async function verifyTelegramAuth(data, botToken) {
+  const authDate = parseInt(data.auth_date, 10);
+  if (!authDate || Math.abs(Date.now() / 1000 - authDate) > 86400) return false; // reject stale (>24h) payloads
+
+  const { hash, ...fields } = data;
+  const checkString = Object.keys(fields)
+    .sort()
+    .map((k) => `${k}=${fields[k]}`)
+    .join("\n");
+
+  const encoder = new TextEncoder();
+  const secretKeyBytes = await crypto.subtle.digest("SHA-256", encoder.encode(botToken));
+  const key = await crypto.subtle.importKey("raw", secretKeyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sigBuf = await crypto.subtle.sign("HMAC", key, encoder.encode(checkString));
+  const hex = [...new Uint8Array(sigBuf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+
+  return hex === hash;
+}
+
+async function handleTelegramAuth(env, request) {
+  if (!env.TELEGRAM_BOT_TOKEN) throw new Error("Telegram login isn't configured on the server yet.");
+  const data = await request.json();
+
+  const valid = await verifyTelegramAuth(data, env.TELEGRAM_BOT_TOKEN);
+  if (!valid) throw new Error("Telegram login verification failed.");
+
+  await env.DB.prepare(
+    `INSERT INTO users (telegram_id, username, first_name, photo_url, last_seen_at)
+     VALUES (?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(telegram_id) DO UPDATE SET
+       username = excluded.username,
+       first_name = excluded.first_name,
+       photo_url = excluded.photo_url,
+       last_seen_at = datetime('now')`
+  )
+    .bind(data.id, data.username || null, data.first_name || null, data.photo_url || null)
+    .run();
+
+  return { ok: true, user: { id: data.id, username: data.username, first_name: data.first_name, photo_url: data.photo_url } };
+}
+
+async function sendTelegramMessage(env, chatId, text) {
+  if (!env.TELEGRAM_BOT_TOKEN) throw new Error("Telegram bot isn't configured on the server yet.");
+  const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.description || "Telegram send failed");
+  return data;
+}
+
+async function handleTelegramNotify(env, request) {
+  const { telegram_id, message } = await request.json();
+  if (!telegram_id || !message) throw new Error("telegram_id and message are required.");
+  await sendTelegramMessage(env, telegram_id, message);
+  return { ok: true };
+}
+
+async function handleTelegramSendPdf(env, request) {
+  if (!env.TELEGRAM_BOT_TOKEN) throw new Error("Telegram bot isn't configured on the server yet.");
+  const form = await request.formData();
+  const telegramId = form.get("telegram_id");
+  const file = form.get("file");
+  if (!telegramId || !file) throw new Error("telegram_id and file are required.");
+
+  const upstream = new FormData();
+  upstream.append("chat_id", telegramId);
+  upstream.append("document", file, "weekly-score.pdf");
+  upstream.append("caption", "Your Weekly Test Score \u{1F3C6}");
+
+  const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendDocument`, {
+    method: "POST",
+    body: upstream,
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.description || "Telegram send failed");
+  return { ok: true };
 }
 
 async function buildWeeklyTestPayload(env, start, end, ids) {

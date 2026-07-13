@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Weekly Test — WonderMayank</title>
 <link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -15,13 +16,17 @@
     <a href="practice.html?cat=grammar">Grammar</a>
     <a href="practice.html?cat=vocabulary">Vocabulary</a>
     <a href="weekly-test.html" class="active">Weekly Test</a>
+    <a href="mistakes.html">Review Mistakes</a>
   </div>
-  <div class="nav-cta"></div>
+  <div class="nav-cta"><span id="streak-badge" class="streak-badge"></span></div>
 </nav>
 
 <div id="root" class="wrap"></div>
 
+<script src="progress.js"></script>
 <script>
+document.getElementById('streak-badge').textContent = WM.currentStreak() > 0 ? `\u{1F525} ${WM.currentStreak()} day streak` : '';
+
 const root = document.getElementById('root');
 let state = { screen: 'loading' };
 let testData = null;      // { weekStart, weekEnd, totalQuestions, questions }
@@ -50,23 +55,35 @@ async function loadStatus() {
 }
 
 function renderLocked(status) {
+  const daysDone = WM.daysCompletedThisWeek();
+  const streakOk = daysDone >= WM.MIN_STREAK_FOR_TEST;
+  const canOpen = status.isSunday && streakOk;
+
+  let pillLabel = 'Unlocks every Sunday';
+  if (status.isSunday && !streakOk) pillLabel = 'Streak locked';
+  else if (canOpen) pillLabel = 'Unlocked today';
+
+  let message;
+  if (!status.isSunday) {
+    message = `Come back on <strong>${status.weekEnd}</strong> to take the full-week CBT test.`;
+  } else if (!streakOk) {
+    message = `Complete all 3 categories (Grammar, Vocabulary, RC) on at least <strong>${WM.MIN_STREAK_FOR_TEST} days</strong> this week to unlock the test. You're at <strong>${daysDone} / ${WM.MIN_STREAK_FOR_TEST}</strong> so far — practice today to close the gap.`;
+  } else {
+    message = 'The full-week CBT test is ready to generate.';
+  }
+
   root.innerHTML = `
     <div class="week-hero">
-      <span class="week-status-pill ${status.isSunday ? 'open' : 'closed'}">
-        ${status.isSunday ? 'Unlocked today' : 'Unlocks every Sunday'}
-      </span>
+      <span class="week-status-pill ${canOpen ? 'open' : 'closed'}">${pillLabel}</span>
       <h2>Week of ${status.weekStart} → ${status.weekEnd}</h2>
-      <p>${status.questionsThisWeek} questions collected so far this week.
-      ${status.isSunday
-        ? 'The full-week CBT test is ready to generate.'
-        : `Come back on <strong>${status.weekEnd}</strong> to take the full-week CBT test.`}</p>
-      <button id="gen-btn" class="btn btn-primary" ${status.isSunday ? '' : 'disabled'}>
+      <p>${status.questionsThisWeek} questions collected so far this week. ${message}</p>
+      <button id="gen-btn" class="btn btn-primary" ${canOpen ? '' : 'disabled'}>
         ${status.testGenerated ? 'Open This Week\'s Test' : 'Generate Test'} <span class="icon-circle">→</span>
       </button>
     </div>
   `;
   const btn = document.getElementById('gen-btn');
-  if (status.isSunday) {
+  if (canOpen) {
     btn.addEventListener('click', generateAndStart);
   }
 }
@@ -175,6 +192,42 @@ function confirmSubmit() {
   if (confirm(msg)) submitTest();
 }
 
+function generateScorePdf({ correct, wrong, unattempted, total, pct, weekStart, weekEnd, byCategory }) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const user = WM.getTelegramUser();
+
+  doc.setFontSize(18);
+  doc.text('WonderMayank — Weekly Test Score Card', 14, 20);
+  doc.setFontSize(11);
+  doc.text(`Week: ${weekStart} to ${weekEnd}`, 14, 30);
+  if (user) {
+    doc.text(`Student: ${user.first_name || ''}${user.username ? ' (@' + user.username + ')' : ''}`, 14, 37);
+  }
+
+  doc.setFontSize(32);
+  doc.text(`${pct}%`, 14, 58);
+  doc.setFontSize(11);
+  doc.text(`${correct} correct out of ${total}`, 14, 66);
+  doc.text(`Correct: ${correct}    Wrong: ${wrong}    Skipped: ${unattempted}`, 14, 74);
+
+  let y = 90;
+  doc.setFontSize(13);
+  doc.text('By Category', 14, y);
+  y += 8;
+  doc.setFontSize(11);
+  Object.entries(byCategory).forEach(([cat, s]) => {
+    doc.text(`${cat}: ${s.correct} / ${s.total}`, 14, y);
+    y += 7;
+  });
+
+  doc.setFontSize(9);
+  doc.setTextColor(150);
+  doc.text(`Generated ${new Date().toLocaleString('en-IN')}`, 14, 285);
+
+  return doc;
+}
+
 function submitTest() {
   clearInterval(timerInterval);
   let correct = 0, wrong = 0, unattempted = 0;
@@ -192,6 +245,16 @@ function submitTest() {
   const total = testData.totalQuestions;
   const pct = total ? Math.round((correct / total) * 100) : 0;
 
+  testData.questions.forEach(q => {
+    const given = answers[q.id];
+    if (given && given !== q.correct) {
+      WM.saveMistake(q, given, q.date, q.category);
+    }
+  });
+
+  const lastResult = { correct, wrong, unattempted, total, pct, weekStart: testData.weekStart, weekEnd: testData.weekEnd, byCategory };
+  const tgUser = WM.getTelegramUser();
+
   root.innerHTML = `
     <div class="cbt-shell">
       <div class="result-summary">
@@ -203,10 +266,38 @@ function submitTest() {
           <div class="cell"><div class="num" style="color:#C9503F;">${wrong}</div><div class="label">Wrong</div></div>
           <div class="cell"><div class="num" style="color:var(--text-muted);">${unattempted}</div><div class="label">Skipped</div></div>
         </div>
+        <div class="result-actions">
+          <button id="download-pdf-btn" class="btn btn-secondary">Download Score PDF</button>
+          <button id="send-telegram-btn" class="btn btn-secondary" ${tgUser ? '' : 'disabled title="Sign in with Telegram on the homepage first"'}>Send to Telegram</button>
+        </div>
       </div>
       <div id="review-list"></div>
     </div>
   `;
+
+  document.getElementById('download-pdf-btn').addEventListener('click', () => {
+    generateScorePdf(lastResult).save(`weekly-score-${lastResult.weekStart}.pdf`);
+  });
+
+  document.getElementById('send-telegram-btn').addEventListener('click', async () => {
+    const user = WM.getTelegramUser();
+    if (!user) { alert('Sign in with Telegram on the homepage first.'); return; }
+    const btn = document.getElementById('send-telegram-btn');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      const blob = generateScorePdf(lastResult).output('blob');
+      const fd = new FormData();
+      fd.append('telegram_id', user.id);
+      fd.append('file', blob, 'weekly-score.pdf');
+      const res = await fetch('/api/telegram/send-pdf', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      btn.textContent = 'Sent ✓';
+    } catch (err) {
+      alert('Could not send: ' + err.message);
+      btn.disabled = false; btn.textContent = 'Send to Telegram';
+    }
+  });
 
   const reviewList = document.getElementById('review-list');
   reviewList.innerHTML = testData.questions.map((q, i) => {

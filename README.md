@@ -131,6 +131,35 @@ In the Cloudflare dashboard → Workers & Pages → your Worker → **Settings �
 add a route on `wondermayank.in` (or a subdomain like `rc.wondermayank.in`) the same way you've
 routed your other tools.
 
+## New: streaks, mistake review, Telegram sign-in, PDF score, weekly topic sets
+
+- **Streaks & mistake review** are 100% client-side (`public/progress.js`, `localStorage`) — no
+  extra setup needed. A day counts as "done" once all 3 categories (Grammar, Vocabulary, RC) are
+  fully answered that day. The Weekly Test now stays locked on Sunday unless the visitor has
+  completed at least **5 days** that week — tune this via `MIN_STREAK_FOR_TEST` in `progress.js`.
+- **PDF score card** on the weekly test uses jsPDF from a CDN (`weekly-test.html`) — no build step,
+  no secret needed.
+- **Sign in with Telegram** and pushing the score PDF to your bot **does** need setup:
+  1. Message [@BotFather](https://t.me/BotFather) → `/setdomain` → pick `Thunderstudy_eng_robot` →
+     enter the exact domain you deploy to (e.g. `rc.wondermayank.in`). The Login Widget will
+     refuse to render on any domain that isn't whitelisted here.
+  2. Set the bot token as a Worker secret — **never commit it to the repo or paste it into any
+     file**, it grants full control of the bot:
+     ```bash
+     npx wrangler secret put TELEGRAM_BOT_TOKEN
+     # paste the token you got from @BotFather when prompted
+     ```
+  3. Apply the updated schema (adds a `users` table) if you haven't already:
+     ```bash
+     npx wrangler d1 execute wondermayank-rc-db --remote --file=./schema.sql
+     ```
+  Note: Telegram's Login Widget only ever needs the one bot token — there's no separate
+  client id/secret pair like OAuth providers use, so if you were given anything else labeled
+  "client secret", it isn't needed here.
+- **Weekly 10-question topic set** (homepage) pulls 10 random questions from the full D1 archive
+  matching up to 10 chosen topics — no new schema needed, it reuses `topic_tag` on
+  `daily_content`. Gated to once per Mon–Sun week via `localStorage`, same as streaks.
+
 ## Notes / limits worth knowing
 
 - **Groq free tier**: 30 requests/min, ~1,000 requests/day per model, no card required. This app

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Review Mistakes — WonderMayank</title>
+<meta name="description" content="Review every question you've gotten wrong across Grammar, Vocabulary and RC practice, saved locally on this device.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="brand"><span class="brand-mark">W</span>Wonder<span class="accent">Mayank</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="practice.html?cat=grammar">Grammar</a>
+    <a href="practice.html?cat=vocabulary">Vocabulary</a>
+    <a href="weekly-test.html">Weekly Test</a>
+    <a href="mistakes.html" class="active">Review Mistakes</a>
+  </div>
+  <div class="nav-cta"><span id="streak-badge" class="streak-badge"></span></div>
+</nav>
+
+<div class="page-header">
+  <span class="eyebrow-label">Saved locally on this device</span>
+  <h2 class="section-title">Review Mistakes</h2>
+</div>
+
+<div class="wrap" id="mistake-list"></div>
+
+<script src="progress.js"></script>
+<script>
+document.getElementById('streak-badge').textContent = WM.currentStreak() > 0 ? `\u{1F525} ${WM.currentStreak()} day streak` : '';
+
+function render() {
+  const list = WM.getMistakes();
+  const area = document.getElementById('mistake-list');
+
+  if (!list.length) {
+    area.innerHTML = `<div class="empty-state">No mistakes saved yet. Wrong answers from Practice or your Weekly Topic Set will show up here so you can revisit them.</div>`;
+    return;
+  }
+
+  area.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <span style="color:var(--text-muted); font-size:14px;">${list.length} saved</span>
+      <button id="clear-all-btn" class="btn btn-secondary">Clear All</button>
+    </div>
+  ` + list.map(m => `
+    <div class="q-card">
+      <div class="q-meta">
+        <span class="q-chip">${m.category}</span>
+        ${m.topic ? `<span class="q-chip">${m.topic}</span>` : ''}
+        <span class="q-chip">${m.date}</span>
+      </div>
+      <div class="q-text">${m.question}</div>
+      <div class="option-row">
+        ${['a','b','c','d'].map(l => {
+          let cls = 'option';
+          if (l === m.correct) cls += ' correct';
+          else if (l === m.chosen) cls += ' wrong';
+          return `<div class="${cls}"><span class="letter">${l.toUpperCase()}</span> ${m.options[l]}</div>`;
+        }).join('')}
+      </div>
+      <div class="explanation show">${m.explanation || ''}</div>
+      <button class="btn-ghost dismiss-btn" data-id="${m.id}" style="margin-top:12px; border-radius:8px;">Dismiss</button>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.dismiss-btn').forEach(btn => {
+    btn.addEventListener('click', () => { WM.clearMistake(parseInt(btn.dataset.id, 10)); render(); });
+  });
+  document.getElementById('clear-all-btn').addEventListener('click', () => {
+    if (confirm('Clear all saved mistakes?')) { WM.clearAllMistakes(); render(); }
+  });
+}
+
+render();
+</script>
+
+</body>
+</html>
