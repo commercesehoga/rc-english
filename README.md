@@ -128,8 +128,8 @@ browser and click through Grammar / Vocabulary / Reading Comprehension.
 ## 8. Custom domain (optional)
 
 In the Cloudflare dashboard → Workers & Pages → your Worker → **Settings → Domains & Routes**,
-add a route on `wondermayank.in` (or a subdomain like `rc.wondermayank.in`) the same way you've
-routed your other tools.
+add a route on your domain (this project is deployed on `english.thunderstudy.indevs.in`) the
+same way you've routed your other tools.
 
 ## New: streaks, mistake review, Telegram sign-in, PDF score, weekly topic sets
 
@@ -140,9 +140,9 @@ routed your other tools.
 - **PDF score card** on the weekly test uses jsPDF from a CDN (`weekly-test.html`) — no build step,
   no secret needed.
 - **Sign in with Telegram** and pushing the score PDF to your bot **does** need setup:
-  1. Message [@BotFather](https://t.me/BotFather) → `/setdomain` → pick `tiny_english_bot` →
-     enter the exact domain you deploy to (e.g. `rc.wondermayank.in`). The Login Widget will
-     refuse to render on any domain that isn't whitelisted here.
+  1. Message [@BotFather](https://t.me/BotFather) → `/setdomain` → pick `Tiny_english_robot` →
+     enter the exact domain you deploy to (`english.thunderstudy.indevs.in`). The Login Widget
+     will refuse to render on any domain that isn't whitelisted here.
   2. Set the bot token as a Worker secret — **never commit it to the repo or paste it into any
      file**, it grants full control of the bot:
      ```bash
@@ -164,7 +164,8 @@ routed your other tools.
      ```bash
      npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
      ```
-  2. Update the `SITE_URL` constant near the top of `worker/index.js` to your real deploy URL,
+  2. `SITE_URL` near the top of `worker/index.js` is already set to
+     `https://english.thunderstudy.indevs.in` — update it there if the domain ever changes,
      then deploy.
   3. Tell Telegram where to send updates (fill in your bot token, deploy URL, and the same
      secret from step 1):

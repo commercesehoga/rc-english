@@ -6,7 +6,7 @@ const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
 // Used inside the Telegram bot's replies (/start, /today, /week). Update this if/when you
 // put the app on a custom domain (Settings → Domains & Routes) — see README section 8.
-const SITE_URL = "https://wondermayank-rc.workers.dev"; // TODO: replace with your real deploy URL
+const SITE_URL = "https://english.thunderstudy.indevs.in"; // used in the bot's /start, /today, /week replies
 
 export default {
   async fetch(request, env, ctx) {
