@@ -29,6 +29,17 @@
   </div>
 </nav>
 
+<div class="wrap" id="telegram-panel">
+  <div class="section-head">
+    <div>
+      <span class="eyebrow-label">Optional</span>
+      <h2 class="section-title">Sign in with Telegram</h2>
+      <p class="section-desc">Sign in to get your weekly score card sent straight to <a href="https://t.me/tiny_english_bot" target="_blank" rel="noopener">@tiny_english_bot</a> on Telegram.</p>
+    </div>
+  </div>
+  <div class="telegram-card" id="telegram-card"></div>
+</div>
+
 <section class="hero">
   <div>
     <span class="eyebrow">★ Master. Practice. Achieve.</span>
@@ -100,17 +111,6 @@
   </div>
 </div>
 
-<div class="wrap" id="telegram-panel">
-  <div class="section-head">
-    <div>
-      <span class="eyebrow-label">Optional</span>
-      <h2 class="section-title">Sign in with Telegram</h2>
-      <p class="section-desc">Sign in to get your weekly score card sent straight to <a href="https://t.me/Thunderstudy_eng_robot" target="_blank" rel="noopener">@Thunderstudy_eng_robot</a> on Telegram.</p>
-    </div>
-  </div>
-  <div class="telegram-card" id="telegram-card"></div>
-</div>
-
 <div class="wrap" id="topics-weekly">
   <div class="section-head">
     <div>
@@ -149,7 +149,7 @@
   // ---------- Telegram sign-in ----------
   // NOTE for deploy: TELEGRAM_BOT_TOKEN must be set on the Worker with
   // `wrangler secret put TELEGRAM_BOT_TOKEN`, and the bot's domain must be
-  // whitelisted via @BotFather → /setdomain → Thunderstudy_eng_robot → your live domain.
+  // whitelisted via @BotFather → /setdomain → tiny_english_bot → your live domain.
 
   function onTelegramAuth(user) {
     fetch('/api/auth/telegram', {
@@ -189,7 +189,7 @@
       const script = document.createElement('script');
       script.async = true;
       script.src = 'https://telegram.org/js/telegram-widget.js?22';
-      script.setAttribute('data-telegram-login', 'Thunderstudy_eng_robot');
+      script.setAttribute('data-telegram-login', 'tiny_english_bot');
       script.setAttribute('data-size', 'large');
       script.setAttribute('data-radius', '10');
       script.setAttribute('data-onauth', 'onTelegramAuth(user)');

@@ -140,7 +140,7 @@ routed your other tools.
 - **PDF score card** on the weekly test uses jsPDF from a CDN (`weekly-test.html`) — no build step,
   no secret needed.
 - **Sign in with Telegram** and pushing the score PDF to your bot **does** need setup:
-  1. Message [@BotFather](https://t.me/BotFather) → `/setdomain` → pick `Thunderstudy_eng_robot` →
+  1. Message [@BotFather](https://t.me/BotFather) → `/setdomain` → pick `tiny_english_bot` →
      enter the exact domain you deploy to (e.g. `rc.wondermayank.in`). The Login Widget will
      refuse to render on any domain that isn't whitelisted here.
   2. Set the bot token as a Worker secret — **never commit it to the repo or paste it into any
@@ -156,6 +156,24 @@ routed your other tools.
   Note: Telegram's Login Widget only ever needs the one bot token — there's no separate
   client id/secret pair like OAuth providers use, so if you were given anything else labeled
   "client secret", it isn't needed here.
+- **The bot itself (interactive commands)** runs in the same Worker, no separate host needed —
+  see `handleTelegramWebhook` in `worker/index.js`. It answers `/start`, `/today`, `/week`, and
+  `/help`. One-time setup after deploying:
+  1. Pick any random string as a webhook secret and store it (this stops randoms from POSTing
+     fake updates at your bot — only Telegram will know this value):
+     ```bash
+     npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
+     ```
+  2. Update the `SITE_URL` constant near the top of `worker/index.js` to your real deploy URL,
+     then deploy.
+  3. Tell Telegram where to send updates (fill in your bot token, deploy URL, and the same
+     secret from step 1):
+     ```bash
+     curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=<SITE_URL>/api/telegram/webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+     ```
+  4. Confirm it's registered: `curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo"`
+     — `last_error_message` should be empty.
+  Message your bot `/start` on Telegram afterwards to confirm it replies.
 - **Weekly 10-question topic set** (homepage) pulls 10 random questions from the full D1 archive
   matching up to 10 chosen topics — no new schema needed, it reuses `topic_tag` on
   `daily_content`. Gated to once per Mon–Sun week via `localStorage`, same as streaks.

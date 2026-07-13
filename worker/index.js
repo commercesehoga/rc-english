@@ -4,6 +4,10 @@
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
+// Used inside the Telegram bot's replies (/start, /today, /week). Update this if/when you
+// put the app on a custom domain (Settings → Domains & Routes) — see README section 8.
+const SITE_URL = "https://wondermayank-rc.workers.dev"; // TODO: replace with your real deploy URL
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -75,6 +79,13 @@ async function handleApi(request, env, url) {
 
     if (pathname === "/api/telegram/send-pdf" && request.method === "POST") {
       return json(await handleTelegramSendPdf(env, request), headers);
+    }
+
+    // Telegram calls this directly (server-to-server) once you register it with setWebhook —
+    // see the setup notes above handleTelegramWebhook below. Not part of the JSON API, so it
+    // returns its own plain-text response instead of going through json().
+    if (pathname === "/api/telegram/webhook" && request.method === "POST") {
+      return handleTelegramWebhook(env, request);
     }
 
     return json({ error: "Not found" }, headers, 404);
@@ -474,6 +485,72 @@ async function handleTelegramSendPdf(env, request) {
   const data = await res.json();
   if (!data.ok) throw new Error(data.description || "Telegram send failed");
   return { ok: true };
+}
+
+// ---------- Telegram bot webhook (the actual interactive bot, e.g. /start, /today) ----------
+// This is separate from "Sign in with Telegram" above: that's the Login Widget verifying a
+// signed payload from the browser; this is Telegram pushing chat updates to the bot itself.
+// Both use the same TELEGRAM_BOT_TOKEN — one bot, two features.
+//
+// One-time setup after you deploy:
+//   1. Pick any random string as a webhook secret and store it:
+//        npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
+//   2. Tell Telegram where to send updates (fill in your token, deploy URL, and the same secret):
+//        curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=<SITE_URL>/api/telegram/webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+//      Replace <SITE_URL> with the same value you set for the SITE_URL constant above.
+//   3. Confirm it registered: curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo"
+async function handleTelegramWebhook(env, request) {
+  // Telegram echoes back whatever secret_token you registered with setWebhook, in this header —
+  // reject anything that doesn't match so randoms can't POST fake updates at your bot.
+  const incomingSecret = request.headers.get("X-Telegram-Bot-Api-Secret-Token");
+  if (!env.TELEGRAM_WEBHOOK_SECRET || incomingSecret !== env.TELEGRAM_WEBHOOK_SECRET) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const update = await request.json().catch(() => null);
+  const msg = update && (update.message || update.edited_message);
+
+  if (msg && typeof msg.text === "string") {
+    const chatId = msg.chat.id;
+    const text = msg.text.trim();
+
+    try {
+      if (text === "/start" || text.startsWith("/start ")) {
+        await sendTelegramMessage(
+          env,
+          chatId,
+          `👋 Welcome to <b>WonderMayank — RC / Grammar / Vocabulary</b>!\n\n` +
+            `Sign in with Telegram on the website and I'll send your weekly score card here automatically.\n\n` +
+            `🔗 ${SITE_URL}\n\n` +
+            `Commands:\n/today — today's practice link\n/week — this week's test status\n/help — show this again`
+        );
+      } else if (text === "/help") {
+        await sendTelegramMessage(
+          env,
+          chatId,
+          `Commands:\n/today — today's practice link\n/week — this week's test status\n/start — welcome message`
+        );
+      } else if (text === "/today") {
+        await sendTelegramMessage(env, chatId, `📚 Today's Grammar, Vocabulary &amp; RC practice:\n${SITE_URL}/practice.html`);
+      } else if (text === "/week") {
+        const status = await getWeekStatus(env);
+        const line = status.isSunday
+          ? status.testGenerated
+            ? "The weekly test is generated — go take it!"
+            : "It's Sunday — the weekly test is unlocked, go generate it!"
+          : `Not Sunday yet — ${status.questionsThisWeek} questions logged so far this week.`;
+        await sendTelegramMessage(env, chatId, `🗓️ ${line}\n${SITE_URL}/weekly-test.html`);
+      } else {
+        await sendTelegramMessage(env, chatId, "Not sure what you mean — try /help.");
+      }
+    } catch (err) {
+      // Don't throw: Telegram retries webhooks that don't return 200, which would just
+      // resend the same update. The failed send is the only thing lost here.
+    }
+  }
+
+  // Always reply 200 fast, or Telegram queues retries of this same update.
+  return new Response("ok", { status: 200 });
 }
 
 async function buildWeeklyTestPayload(env, start, end, ids) {

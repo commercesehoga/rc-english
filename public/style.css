@@ -469,6 +469,10 @@ h1.hero-title .accent { color: var(--gold-deep); }
 
 /* ---------- Telegram sign-in ---------- */
 
+#telegram-panel {
+  margin: 8px auto 32px;
+}
+
 .telegram-card {
   background: var(--card);
   border: 1px solid var(--border);
