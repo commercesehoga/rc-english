@@ -444,6 +444,19 @@ async function handleTelegramAuth(env, request) {
     .bind(data.id, data.username || null, data.first_name || null, data.photo_url || null)
     .run();
 
+  // Confirm it worked right inside the chat with the bot. This can fail silently if the person
+  // has never opened a chat with @Tiny_english_robot before — Telegram requires that before a
+  // bot can message someone — so it's wrapped so a failed notify never fails the sign-in itself.
+  try {
+    await sendTelegramMessage(
+      env,
+      data.id,
+      `✅ You're logged in${data.first_name ? `, ${data.first_name}` : ""}! I'll send your weekly score card here every Sunday.`
+    );
+  } catch (err) {
+    // Most likely they haven't messaged the bot yet — sign-in still succeeded either way.
+  }
+
   return { ok: true, user: { id: data.id, username: data.username, first_name: data.first_name, photo_url: data.photo_url } };
 }
 
