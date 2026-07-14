@@ -217,11 +217,15 @@
   // NOTE for deploy: TELEGRAM_BOT_TOKEN must be set on the Worker with
   // `wrangler secret put TELEGRAM_BOT_TOKEN`, and the bot's domain must be
   // whitelisted via @BotFather → /setdomain → Tiny_english_robot → your live domain.
+  // This is REQUIRED — the widget below will show "Bot domain invalid" without it, no matter
+  // how the frontend code is written.
   //
-  // Sign-in opens /api/auth/telegram/start in a real new browser tab (full URL bar, no popup
-  // chrome), which 302-redirects straight to Telegram's own oauth.telegram.org page. Once
-  // approved, Telegram redirects that same tab to telegram-callback.html, which verifies the
-  // login (same /api/auth/telegram endpoint as before) and hands control back here.
+  // "Continue in browser" now uses Telegram's actual official Login Widget
+  // (https://core.telegram.org/widgets/login) — the telegram-widget.js script tag, not a
+  // hand-rolled redirect to oauth.telegram.org. Telegram's own script manages the popup/iframe
+  // and auth flow internally and calls back via the global onTelegramAuth(user) function once
+  // approved; we just POST that user object to /api/auth/telegram (unchanged — the HMAC-SHA256
+  // verification there already matched Telegram's documented check exactly).
 
   function renderTelegramCard() {
     const el = document.getElementById('telegram-card');
@@ -279,22 +283,12 @@
       btn.setAttribute('aria-expanded', String(open));
     }
 
-    // Opens a URL as a real small popup window (centered, fixed size) instead of a new tab —
-    // this is how Telegram's own login widget behaves, and it's what makes window.opener /
-    // postMessage back to this tab reliable.
-    function openPopup(url, name) {
-      const w = 550, h = 470;
-      const left = window.screenX + (window.outerWidth - w) / 2;
-      const top = window.screenY + (window.outerHeight - h) / 2;
-      return window.open(url, name, `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
-    }
-
     btn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
     document.addEventListener('click', closeMenu);
 
     document.getElementById('telegram-browser-btn').addEventListener('click', () => {
       closeMenu();
-      openPopup('/api/auth/telegram/start', 'tg_login_popup');
+      window.open('/api/auth/telegram/start', '_blank');
     });
 
     // "Log in from Telegram" — the site's login button hands over a /start deep link (backed by
