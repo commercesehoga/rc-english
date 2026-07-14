@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leaderboard — WonderMayank</title>
+<meta name="description" content="See this week's top scorers on the WonderMayank weekly test and compete with other students.">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="favicon.svg">
+<link rel="apple-touch-icon" href="favicon.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#B87E38">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="WonderMayank">
+<meta property="og:url" content="https://english.thunderstudy.indevs.in/leaderboard.html">
+<meta property="og:title" content="Leaderboard — WonderMayank">
+<meta property="og:description" content="See this week's top scorers on the WonderMayank weekly test and compete with other students.">
+<meta property="og:image" content="https://english.thunderstudy.indevs.in/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Leaderboard — WonderMayank">
+<meta name="twitter:description" content="See this week's top scorers on the WonderMayank weekly test and compete with other students.">
+<meta name="twitter:image" content="https://english.thunderstudy.indevs.in/og-image.png">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="brand"><img src="https://wondermayank.github.io/favicon.svg" alt="" class="brand-mark">Wonder<span class="accent">Mayank</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="practice.html?cat=grammar">Grammar</a>
+    <a href="practice.html?cat=vocabulary">Vocabulary</a>
+    <a href="weekly-test.html">Weekly Test</a>
+    <a href="leaderboard.html" class="active">Leaderboard</a>
+    <a href="mistakes.html">Review Mistakes</a>
+  </div>
+  <div class="nav-cta"><span id="streak-badge" class="streak-badge"></span></div>
+</nav>
+
+<div class="page-header">
+  <span class="eyebrow-label">Compete with other students</span>
+  <h2 class="section-title">Weekly Leaderboard</h2>
+</div>
+
+<div class="wrap" id="app-area"></div>
+
+<script src="progress.js"></script>
+<script src="nav.js"></script>
+<script src="pwa.js"></script>
+<script>
+document.getElementById('streak-badge').textContent = WM.currentStreak() > 0 ? `\u{1F525} ${WM.currentStreak()} day streak` : '';
+
+const app = document.getElementById('app-area');
+
+// Builds the last N Monday week-start dates (IST), most recent first, for the week picker.
+function recentWeekStarts(n) {
+  const out = [];
+  let d = WM.weekBounds(WM.todayIST()).start;
+  for (let i = 0; i < n; i++) {
+    out.push(d);
+    const prev = new Date(d + 'T00:00:00Z');
+    prev.setUTCDate(prev.getUTCDate() - 7);
+    d = prev.toISOString().slice(0, 10);
+  }
+  return out;
+}
+
+async function loadLeaderboard(weekStart) {
+  app.innerHTML = '<div class="loading-state">Loading leaderboard…</div>';
+  try {
+    const res = await fetch('/api/leaderboard/' + weekStart);
+    const data = await res.json();
+    render(weekStart, data);
+  } catch (err) {
+    app.innerHTML = `<div class="empty-state">Could not load the leaderboard. ${err.message}</div>`;
+  }
+}
+
+function render(weekStart, data) {
+  const weeks = recentWeekStarts(6);
+  const picker = `
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px;">
+      ${weeks.map(w => `
+        <button type="button" class="archive-topic-pill ${w === weekStart ? 'active' : ''}" data-week="${w}">
+          Week of ${w}
+        </button>
+      `).join('')}
+    </div>
+  `;
+
+  if (!data.configured) {
+    app.innerHTML = picker + `<div class="empty-state">The leaderboard isn't configured yet — check back soon!</div>`;
+    wireWeekButtons();
+    return;
+  }
+
+  if (!data.scores || !data.scores.length) {
+    app.innerHTML = picker + `
+      <div class="leaderboard-card">
+        <h3>🏆 Week of ${weekStart}</h3>
+        <p style="color:var(--text-muted); font-size:13.5px;">No scores yet for this week. Take the <a href="weekly-test.html">Weekly Test</a> and opt in to be the first!</p>
+      </div>
+    `;
+    wireWeekButtons();
+    return;
+  }
+
+  app.innerHTML = picker + `
+    <div class="leaderboard-card">
+      <h3>🏆 Week of ${weekStart}</h3>
+      ${data.scores.map((s, i) => `
+        <div class="leaderboard-row">
+          <span class="leaderboard-rank">#${i + 1}</span>
+          <span class="leaderboard-name">${s.first_name}</span>
+          <span class="leaderboard-pct">${s.pct}%</span>
+        </div>
+      `).join('')}
+    </div>
+    <p class="sync-note">Scores are opt-in — take the <a href="weekly-test.html">Weekly Test</a> and check the leaderboard box on your result screen to appear here.</p>
+  `;
+  wireWeekButtons();
+}
+
+function wireWeekButtons() {
+  document.querySelectorAll('.archive-topic-pill').forEach(btn => {
+    btn.addEventListener('click', () => loadLeaderboard(btn.dataset.week));
+  });
+}
+
+loadLeaderboard(WM.weekBounds(WM.todayIST()).start);
+</script>
+
+</body>
+</html>

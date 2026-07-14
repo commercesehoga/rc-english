@@ -39,6 +39,7 @@
     <a href="practice.html?cat=grammar">Grammar</a>
     <a href="practice.html?cat=vocabulary">Vocabulary</a>
     <a href="weekly-test.html">Weekly Test</a>
+    <a href="leaderboard.html">Leaderboard</a>
     <a href="mistakes.html">Review Mistakes</a>
   </div>
   <div class="nav-cta">
@@ -54,7 +55,7 @@
     <p class="hero-sub">Free daily Reading Comprehension, Grammar and Vocabulary practice — a fresh set every day, plus a full CBT-style test every Sunday covering the whole week.</p>
     <div class="hero-actions">
       <a href="practice.html" class="btn btn-primary">Start Learning <span class="icon-circle">→</span></a>
-      <a href="#topics" class="btn btn-secondary">Explore Topics</a>
+      <a href="#topics" class="btn btn-secondary" id="hero-secondary-btn">Explore Topics</a>
     </div>
     <div class="hero-features">
       <div class="hero-feature"><span class="dot">🤖</span><div><strong>AI Generated</strong><span>Fresh daily</span></div></div>
@@ -63,7 +64,7 @@
     </div>
   </div>
   <div class="hero-visual">
-    <img src="book.png" alt="Illustrated open book reading Learn. Practice. Excel.">
+    <img src="book.png" alt="Illustrated open book reading Learn. Practice. Excel." loading="lazy">
   </div>
 </section>
 
@@ -108,11 +109,11 @@
       <button class="topic-go">→</button>
     </a>
 
-    <a href="practice.html?cat=rc&view=archive" class="topic-card passages">
-      <div class="topic-icon">📄</div>
-      <span class="topic-tag">Passages</span>
-      <h3>Passage Archive</h3>
-      <p>Browse every past RC passage and re-attempt any day you missed.</p>
+    <a href="leaderboard.html" class="topic-card passages">
+      <div class="topic-icon">🏆</div>
+      <span class="topic-tag">Leaderboard</span>
+      <h3>Weekly Leaderboard</h3>
+      <p>See this week's top scorers and compete with other students, first name + score.</p>
       <button class="topic-go">→</button>
     </a>
   </div>
@@ -159,6 +160,7 @@
 </div>
 
 <script src="progress.js"></script>
+<script src="nav.js"></script>
 <script src="pwa.js"></script>
 <script>
   fetch('/api/days').then(r => r.json()).then(d => {
@@ -168,6 +170,48 @@
   }).catch(() => {});
 
   document.getElementById('streak-badge').textContent = WM.currentStreak() > 0 ? `\u{1F525} ${WM.currentStreak()} day streak` : '';
+
+  // ---------- Install App button (hero) ----------
+  // Doubles as "Explore Topics" until the site is installable, then becomes "Install App";
+  // once installed (or if it already is), it reverts to plain "Explore Topics" behavior.
+  (function () {
+    const heroBtn = document.getElementById('hero-secondary-btn');
+    let deferredInstallPrompt = null;
+
+    function isStandalone() {
+      return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    }
+
+    function showExploreTopics() {
+      heroBtn.textContent = 'Explore Topics';
+      heroBtn.setAttribute('href', '#topics');
+      heroBtn.onclick = null;
+    }
+
+    function showInstallButton() {
+      heroBtn.textContent = '📲 Install App';
+      heroBtn.removeAttribute('href');
+      heroBtn.onclick = async (e) => {
+        e.preventDefault();
+        if (!deferredInstallPrompt) { showExploreTopics(); window.location.hash = '#topics'; return; }
+        deferredInstallPrompt.prompt();
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        if (outcome === 'accepted') showExploreTopics(); // installed — button goes back to normal
+      };
+    }
+
+    if (isStandalone()) {
+      showExploreTopics();
+    } else {
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        showInstallButton();
+      });
+      window.addEventListener('appinstalled', showExploreTopics);
+    }
+  })();
 
   // ---------- Telegram sign-in ----------
   // NOTE for deploy: TELEGRAM_BOT_TOKEN must be set on the Worker with
@@ -242,7 +286,38 @@
       const w = 550, h = 470;
       const left = window.screenX + (window.outerWidth - w) / 2;
       const top = window.screenY + (window.outerHeight - h) / 2;
-      window.open(url, name, `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+      return window.open(url, name, `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+    }
+
+    // Some ISPs block/throttle t.me's DNS specifically, which shows a browser-level
+    // DNS_PROBE_FINISHED_NXDOMAIN error even though Telegram itself is reachable. The tg://
+    // custom URI scheme hands off straight to an installed Telegram app (desktop or mobile)
+    // without ever resolving t.me, so it's tried first; the t.me web link is only a fallback
+    // for when no Telegram app is installed to catch that scheme.
+    function openTelegramDeepLink(startParam, popupName) {
+      const username = 'Tiny_english_robot';
+      const suffix = startParam ? `&start=${encodeURIComponent(startParam)}` : '';
+      const tgAppUrl = `tg://resolve?domain=${username}${suffix}`;
+      const webUrl = `https://t.me/${username}${startParam ? '?start=' + encodeURIComponent(startParam) : ''}`;
+
+      const popup = openPopup('about:blank', popupName);
+      if (!popup) { window.location.href = webUrl; return; }
+      try { popup.location.href = tgAppUrl; } catch { /* ignore */ }
+
+      setTimeout(() => {
+        try {
+          if (popup.closed) return;
+          // Browsers typically refuse to navigate away from about:blank for an unregistered
+          // custom scheme (rather than showing an error page) — if it's still sitting there,
+          // no Telegram app caught the tg:// link, so fall back to the normal web URL.
+          if (!popup.location.href || popup.location.href === 'about:blank') {
+            popup.location.href = webUrl;
+          }
+        } catch {
+          // Cross-origin read failure here actually means it DID navigate somewhere useful
+          // (an installed app took over, or it's now sitting on t.me) — nothing to do.
+        }
+      }, 1200);
     }
 
     btn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
@@ -263,7 +338,7 @@
         const res = await fetch('/api/login/start', { method: 'POST' });
         const data = await res.json();
         if (!data.botLink) throw new Error('Could not start Telegram login.');
-        openPopup(data.botLink, 'tg_login_deeplink');
+        openTelegramDeepLink(data.code, 'tg_login_deeplink');
         WM.pollLoginCode(data.code, (user) => {
           if (user) {
             WM.setTelegramUser(user);

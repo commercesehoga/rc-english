@@ -37,6 +37,7 @@
     <a href="practice.html?cat=grammar">Grammar</a>
     <a href="practice.html?cat=vocabulary">Vocabulary</a>
     <a href="weekly-test.html" class="active">Weekly Test</a>
+    <a href="leaderboard.html">Leaderboard</a>
     <a href="mistakes.html">Review Mistakes</a>
   </div>
   <div class="nav-cta"><span id="streak-badge" class="streak-badge"></span></div>
@@ -45,6 +46,7 @@
 <div id="root" class="wrap"></div>
 
 <script src="progress.js"></script>
+<script src="nav.js"></script>
 <script src="pwa.js"></script>
 <script>
 document.getElementById('streak-badge').textContent = WM.currentStreak() > 0 ? `\u{1F525} ${WM.currentStreak()} day streak` : '';

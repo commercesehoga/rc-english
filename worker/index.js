@@ -689,11 +689,11 @@ async function claimLoginCode(env, code, tgUser) {
   return true;
 }
 
-// Called from the bot webhook when someone types plain /start (no token) — self-issues an
-// already-verified token and a magic link, so opening it in any browser signs them straight in.
+// Called from the bot webhook when someone types plain /start for the first time — self-issues
+// an already-verified token and a magic link, so opening it in any browser signs them straight
+// in. The caller (webhook) is responsible for upserting the user row before calling this.
 async function issueSelfLoginLink(env, tgUser) {
   const code = randomCode();
-  await upsertUser(env, tgUser);
   await env.LOGIN_KV.put(code, JSON.stringify({ status: "verified", user: tgUser }), { expirationTtl: LOGIN_VERIFIED_TTL });
   return `${SITE_URL}/telegram-callback.html?login_code=${code}`;
 }
@@ -954,18 +954,27 @@ async function handleTelegramWebhook(env, request) {
         );
       } else if (text === "/start") {
         const tgUser = { id: chatId, username: msg.from.username, first_name: msg.from.first_name, photo_url: null };
+        const existing = await env.DB.prepare(`SELECT telegram_id FROM users WHERE telegram_id = ?`).bind(chatId).first();
+        await upsertUser(env, tgUser); // always save/refresh their id, known or not
         await env.DB.prepare(`UPDATE users SET opt_out_push = 0 WHERE telegram_id = ?`).bind(chatId).run();
-        // Typing /start directly in the bot is itself enough to sign in — no separate /login
-        // command needed. The link is single-use and expires in 2 minutes if not opened.
-        const magicLink = await issueSelfLoginLink(env, tgUser);
-        await sendTelegramMessage(
-          env,
-          chatId,
-          `👋 Welcome to <b>WonderMayank — RC / Grammar / Vocabulary</b>!\n\n` +
-            `🔗 Tap to sign in on the website (works once, expires in 2 minutes):\n${magicLink}\n\n` +
-            `I'll push today's set every morning and your weekly score card automatically once you're signed in.\n\n` +
-            `Commands:\n/today — today's practice link\n/week — this week's test status\n/streak — your current & best streak\n/mistakes — saved mistakes waiting for review\n/stop — pause daily/weekly messages\n/help — show this again`
-        );
+
+        const commandsList =
+          `Commands:\n/today — today's practice link\n/week — this week's test status\n/streak — your current & best streak\n/mistakes — saved mistakes waiting for review\n/stop — pause daily/weekly messages\n/help — show this again`;
+
+        if (existing) {
+          // Already known — no need to hand out a fresh sign-in link every single time they say hi.
+          await sendTelegramMessage(env, chatId, `👋 Welcome back${tgUser.first_name ? `, ${tgUser.first_name}` : ""}!\n\n${commandsList}`);
+        } else {
+          // First contact — /start doubles as sign-in, no separate /login command needed.
+          const magicLink = await issueSelfLoginLink(env, tgUser);
+          await sendTelegramMessage(
+            env,
+            chatId,
+            `👋 Welcome to <b>WonderMayank — RC / Grammar / Vocabulary</b>!\n\n` +
+              `🔗 Tap to sign in on the website (works once, expires in 2 minutes):\n${magicLink}\n\n` +
+              `I'll push today's set every morning and your weekly score card automatically once you're signed in.\n\n${commandsList}`
+          );
+        }
       } else if (text === "/help") {
         await sendTelegramMessage(
           env,

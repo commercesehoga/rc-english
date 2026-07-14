@@ -353,3 +353,49 @@ harmless to leave in place, or drop it if you'd rather:
 ```sql
 DROP TABLE IF EXISTS login_requests;
 ```
+
+## New (this round): quieter /start, tg:// fallback, dedicated Leaderboard page, Install App button
+
+1. **`/start` no longer spams a login link at returning users.** The bot checks `users` for that
+   `telegram_id` first — a brand-new chat still gets the welcome message + one-tap sign-in link,
+   but anyone already known just gets a plain "Welcome back" + the command list. Their user row is
+   always refreshed either way (`upsertUser` runs regardless), so `/streak`/`/mistakes` stay accurate.
+2. **"Log in from Telegram" tries `tg://` before `t.me`.** Some ISPs specifically block/throttle
+   `t.me`'s DNS (shows as `DNS_PROBE_FINISHED_NXDOMAIN`) even though Telegram itself is reachable.
+   The button now first tries handing off to an installed Telegram app via the `tg://resolve`
+   custom URI scheme, which never touches `t.me` at all, and only falls back to the normal
+   `https://t.me/...` link about 1.2s later if nothing caught it. This isn't a complete fix for a
+   network that blocks Telegram entirely (no Telegram app installed + `t.me` blocked = still
+   broken) — if you hit that, it's worth testing on mobile data or a VPN to confirm it's a
+   network-level block and not a code issue.
+3. **Homepage's "Passage Archive" card is now "Weekly Leaderboard".** It links to the new
+   `leaderboard.html`, which shows the current week's top scorers (and lets you flip back through
+   the last 6 weeks) — same opt-in Google-Sheet-backed data as the result screen on
+   `weekly-test.html`. The archive filter/search feature itself hasn't gone anywhere — it's still
+   right there on `practice.html?cat=rc` (or grammar/vocab), just no longer promoted as its own
+   homepage tile.
+4. **Hero's "Explore Topics" button doubles as an Install App prompt.** If the browser fires
+   `beforeinstallprompt` (meaning the site is installable and not already installed), the button
+   becomes "📲 Install App" and triggers the native install dialog on click. Once installed (or if
+   it's already running as an installed app), it reverts to normal "Explore Topics" behavior
+   scrolling to the topic grid. No setup needed — this is standard PWA behavior once `manifest.json`
+   + `sw.js` are being served over HTTPS (already wired in from the earlier PWA round).
+
+## New (this round): mobile pass
+
+- **Working mobile nav.** Previously the nav links just vanished below 760px with no way back to
+  them. `public/nav.js` now injects a hamburger toggle into every page's existing `.navbar`
+  markup (no per-page HTML edits needed) — tap it to open a full-width dropdown with all the same
+  links. Closes on outside-click, on link-click, and on resize back past 760px.
+- **Hero illustration (`book.png`) is gone on mobile** (`≤760px`) — hidden via CSS and also marked
+  `loading="lazy"` on the `<img>` itself, so phones don't download it at all, not just hide it.
+- A handful of small-screen tightening passes: bigger tap targets for the weekly-test question
+  grid and date-nav arrows on mobile, the custom-topic "add" row stacks instead of squeezing on
+  very narrow phones (`≤400px`), the Telegram login dropdown can no longer overflow the viewport
+  edge on small phones, and `overflow-x: hidden` on `html body` as a safety net against any
+  absolutely-positioned menu causing sideways scroll.
+
+No new secrets or migrations — just deploy:
+```bash
+npx wrangler deploy
+```
