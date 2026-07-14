@@ -132,14 +132,11 @@ async function handleApi(request, env, url) {
       return json(await handleTelegramAuth(env, request), headers);
     }
 
-    // Opened via window.open(..., '_blank') from the site — sends the browser straight to
-    // Telegram's full-page OAuth screen (embed=0) in that new tab, instead of the small popup
-    // the default telegram-widget.js opens. Telegram redirects back to telegram-callback.html
-    // with the signed user data once the person approves the login.
-    if (pathname === "/api/auth/telegram/start" && request.method === "GET") {
-      return startTelegramAuth(env, url);
-    }
-
+    // NOTE: this used to hand-roll a redirect straight to oauth.telegram.org (reverse-engineered
+    // from what the official widget does internally). Replaced with Telegram's actual documented
+    // Login Widget (telegram-widget.js + data-onauth callback, see index.html) per
+    // https://core.telegram.org/widgets/login — Telegram's own script manages the popup/auth
+    // flow itself now, so this endpoint isn't needed anymore.
     if (pathname === "/api/telegram/notify" && request.method === "POST") {
       return json(await handleTelegramNotify(env, request), headers);
     }
@@ -727,25 +724,8 @@ async function verifyTelegramAuth(data, botToken) {
   return hex === hash;
 }
 
-// Redirects straight to Telegram's real OAuth page (a genuine new browser tab, full URL bar
-// and all) instead of the small JS popup that the embedded telegram-widget.js normally opens.
-// bot_id is just the numeric prefix of the bot token (before the colon) — no extra secret needed.
-function startTelegramAuth(env, url) {
-  if (!env.TELEGRAM_BOT_TOKEN) {
-    return new Response("Telegram login isn't configured on the server yet.", { status: 500 });
-  }
-  const botId = env.TELEGRAM_BOT_TOKEN.split(":")[0];
-  const origin = url.origin;
-  const returnTo = `${origin}/telegram-callback.html`;
-
-  const authorizeUrl =
-    `https://oauth.telegram.org/auth?bot_id=${encodeURIComponent(botId)}` +
-    `&origin=${encodeURIComponent(origin)}` +
-    `&embed=0&request_access=write` +
-    `&return_to=${encodeURIComponent(returnTo)}`;
-
-  return Response.redirect(authorizeUrl, 302);
-}
+// verifyTelegramAuth (below) still does the official HMAC-SHA256 check per Telegram's docs —
+// that part was always correct and is reused by the new official-widget flow unchanged.
 
 async function handleTelegramAuth(env, request) {
   if (!env.TELEGRAM_BOT_TOKEN) throw new Error("Telegram login isn't configured on the server yet.");
