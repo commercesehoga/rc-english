@@ -638,8 +638,13 @@ async function handleLeaderboardSubmit(env, request) {
 // successfully reads a verified token, it's deleted immediately — so a link can only ever
 // complete one login, never two.
 
-const LOGIN_PENDING_TTL = 180; // 3 minutes to open the bot and approve
-const LOGIN_VERIFIED_TTL = 120; // 2 more minutes for the site to notice and finish signing in
+// NOTE: these used to be 180/120 — exactly equal to the site's old 180000ms poll timeout.
+// That meant a login approved near the edge of the pending window could get claimed just as
+// (or after) the browser gave up polling, so the "verified" entry sat in KV and was never read.
+// Bumped both up with real headroom, and the client's poll timeout (progress.js) now comfortably
+// outlasts PENDING_TTL + VERIFIED_TTL combined.
+const LOGIN_PENDING_TTL = 300; // 5 minutes to open the bot and approve
+const LOGIN_VERIFIED_TTL = 300; // 5 more minutes for the site to notice and finish signing in
 
 function randomCode() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 12);
@@ -971,7 +976,7 @@ async function handleTelegramWebhook(env, request) {
             env,
             chatId,
             `👋 Welcome to <b>WonderMayank — RC / Grammar / Vocabulary</b>!\n\n` +
-              `🔗 Tap to sign in on the website (works once, expires in 2 minutes):\n${magicLink}\n\n` +
+              `🔗 Tap to sign in on the website (works once, expires in 5 minutes):\n${magicLink}\n\n` +
               `I'll push today's set every morning and your weekly score card automatically once you're signed in.\n\n${commandsList}`
           );
         }
