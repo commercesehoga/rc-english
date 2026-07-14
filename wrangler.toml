@@ -23,7 +23,7 @@ database_id = "b11509f7-cd13-4d8f-839c-ec7302e01e56"
 # 3 minutes, approved-but-not-yet-picked-up ones after 2 — so there's nothing to clean up.
 [[kv_namespaces]]
 binding = "LOGIN_KV"
-id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
+id = "a5f9c5f4809d49eaad8ce830a9b2e92f"
 
 # Daily content generation. 30 0 * * * = 00:30 UTC = 6:00 AM IST.
 # Cloudflare cron always runs in UTC — this is the IST-adjusted equivalent.
