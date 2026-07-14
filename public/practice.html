@@ -9,6 +9,8 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="favicon.svg">
 <link rel="apple-touch-icon" href="favicon.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#B87E38">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="WonderMayank">
@@ -58,11 +60,20 @@
   </div>
 </div>
 
+<div class="wrap" id="archive-toolbar-wrap" style="display:none;">
+  <div class="archive-toolbar">
+    <div id="archive-topic-pills" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+    <input type="search" id="archive-search-input" placeholder="Search past passages by keyword…">
+  </div>
+  <div class="archive-results" id="archive-results"></div>
+</div>
+
 <div class="wrap" id="content-area">
   <div class="loading-state">Loading today's questions…</div>
 </div>
 
 <script src="progress.js"></script>
+<script src="pwa.js"></script>
 <script>
 document.getElementById('streak-badge').textContent = WM.currentStreak() > 0 ? `\u{1F525} ${WM.currentStreak()} day streak` : '';
 
@@ -72,11 +83,67 @@ let currentDate = params.get('date') || null; // null = today
 let availableDays = [];
 
 const titleMap = { rc: 'Reading Comprehension', grammar: 'Grammar', vocabulary: 'Vocabulary' };
+const ARCHIVE_TOPICS = { rc: ['inference', 'tone', 'theme', 'vocabulary', 'detail'], grammar: ['Parts of Speech', 'Tenses', 'Subject-Verb Agreement', 'Active & Passive Voice', 'Direct & Indirect Speech', 'Articles & Prepositions', 'Error Spotting'], vocabulary: ['Synonyms', 'Antonyms', 'Idioms & Phrases', 'One-Word Substitution', 'Spelling Correction'] };
+let activeArchiveTopic = '';
+let archiveSearchTimer = null;
 
 function setActiveTab() {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === currentCat));
   document.getElementById('page-title').textContent = titleMap[currentCat];
+  renderArchiveToolbar();
 }
+
+function renderArchiveToolbar() {
+  const wrap = document.getElementById('archive-toolbar-wrap');
+  wrap.style.display = '';
+  activeArchiveTopic = '';
+  const pillsEl = document.getElementById('archive-topic-pills');
+  const topics = ARCHIVE_TOPICS[currentCat] || [];
+  pillsEl.innerHTML = ['All', ...topics].map(t => `
+    <button type="button" class="archive-topic-pill ${t === 'All' ? 'active' : ''}" data-topic="${t === 'All' ? '' : t}">${t}</button>
+  `).join('');
+  pillsEl.querySelectorAll('.archive-topic-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeArchiveTopic = btn.dataset.topic;
+      pillsEl.querySelectorAll('.archive-topic-pill').forEach(b => b.classList.toggle('active', b === btn));
+      runArchiveSearch();
+    });
+  });
+  document.getElementById('archive-results').innerHTML = '';
+}
+
+async function runArchiveSearch() {
+  const q = document.getElementById('archive-search-input').value.trim();
+  const resultsEl = document.getElementById('archive-results');
+  if (!activeArchiveTopic && !q) { resultsEl.innerHTML = ''; return; }
+  resultsEl.innerHTML = '<div class="loading-state">Searching…</div>';
+  try {
+    const params = new URLSearchParams({ category: currentCat });
+    if (activeArchiveTopic) params.set('topic', activeArchiveTopic);
+    if (q) params.set('q', q);
+    const res = await fetch('/api/archive/search?' + params.toString());
+    const data = await res.json();
+    const results = data.results || [];
+    if (!results.length) { resultsEl.innerHTML = '<div class="empty-state">No matching days found.</div>'; return; }
+    resultsEl.innerHTML = results.map(r => `
+      <button type="button" class="archive-result" data-date="${r.date}">
+        <span class="ar-date">${r.date}</span>
+        <span class="ar-snippet">${r.snippet}</span>
+        <span class="ar-topics">${r.topics.map(t => `<span class="q-chip">${t}</span>`).join('')}</span>
+      </button>
+    `).join('');
+    resultsEl.querySelectorAll('.archive-result').forEach(btn => {
+      btn.addEventListener('click', () => { currentDate = btn.dataset.date; render(); resultsEl.innerHTML = ''; });
+    });
+  } catch (err) {
+    resultsEl.innerHTML = `<div class="empty-state">Search failed. ${err.message}</div>`;
+  }
+}
+
+document.getElementById('archive-search-input').addEventListener('input', () => {
+  clearTimeout(archiveSearchTimer);
+  archiveSearchTimer = setTimeout(runArchiveSearch, 350);
+});
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => { currentCat = btn.dataset.cat; setActiveTab(); render(); });

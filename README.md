@@ -193,3 +193,137 @@ same way you've routed your other tools.
 - To regenerate a specific day manually (e.g. if a Groq call failed mid-way and only 2 of 3
   categories got written), just hit `/api/today` again — it only fills in whatever's missing, it
   never duplicates a category that already exists for that date.
+
+## New (this round): sync, retry mode, archive search, leaderboard, PWA, push bot, Telegram login
+
+### 1. Apply the v2 schema migration first
+
+Everything below (progress sync, leaderboard dedupe, login codes, bot summary columns) needs
+new columns/tables. Run this once, after `schema.sql`:
+
+```bash
+npx wrangler d1 execute wondermayank-rc-db --remote --file=./schema_v2.sql
+```
+
+### 2. Cross-device progress sync
+
+No new secret needed. Signed-in users' whole `localStorage` blob (streak days, mistakes,
+custom-practice weeks, weekly-test results) is mirrored to the new `user_progress` D1 table via
+`POST /api/progress/sync` and pulled back with `GET /api/progress/:telegram_id`. `progress.js`
+calls this automatically (debounced ~1.2s after any change) whenever someone is signed in with
+Telegram — anonymous visitors stay 100% local, same as before.
+
+### 3. Review Mistakes → real retry mode with basic spaced repetition
+
+`mistakes.html` now has a **"Retry These"** button that re-quizzes only the mistakes currently
+due. Each saved mistake carries a `dueDate`/`interval`: get it right on a retry and the interval
+doubles (so it resurfaces further out each time, capped at 30 days); get it wrong and it resets
+to due-again-tomorrow. After 3 clean retries in a row it's considered mastered and drops off the
+list. All of this lives in `progress.js` (`getDueMistakes`, `recordMistakeRetry`) — no backend
+change.
+
+### 4. Passage archive filter/search
+
+`practice.html` now shows topic pills (per category — e.g. inference/tone/theme/detail for RC)
+plus a keyword search box above the day navigator. Both hit the new
+`GET /api/archive/search?category=&topic=&q=` endpoint and jump straight to the matching day.
+
+### 5. Weekly leaderboard — stored in a Google Sheet, opt-in
+
+Scores never touch a paid database — a tiny **Google Apps Script Web App** acts as the sheet's
+API. Set it up once:
+
+1. Create a new Google Sheet. Extensions → Apps Script, paste:
+
+    ```javascript
+    function doPost(e) {
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Sheet1');
+      const p = e.parameter;
+      if (p.secret !== 'PUT_A_LONG_RANDOM_SECRET_HERE') return ContentService.createTextOutput('forbidden');
+      sheet.appendRow([p.telegram_id, p.week_start, p.pct, p.first_name, new Date()]);
+      return ContentService.createTextOutput('ok');
+    }
+
+    function doGet(e) {
+      if (e.parameter.secret !== 'PUT_A_LONG_RANDOM_SECRET_HERE') {
+        return ContentService.createTextOutput(JSON.stringify({ rows: [] })).setMimeType(ContentService.MimeType.JSON);
+      }
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Sheet1');
+      const data = sheet.getDataRange().getValues();
+      const rows = data.map(r => ({ telegram_id: r[0], week_start: r[1], pct: r[2], first_name: r[3] }));
+      return ContentService.createTextOutput(JSON.stringify({ rows })).setMimeType(ContentService.MimeType.JSON);
+    }
+    ```
+
+2. Use the **same random secret** in both places above.
+3. Deploy → **New deployment** → type **Web app** → execute as **Me** → access **Anyone**.
+   Copy the deployment URL.
+4. Set two Worker secrets:
+    ```bash
+    npx wrangler secret put GOOGLE_SHEET_WEBAPP_URL   # the Web App URL from step 3
+    npx wrangler secret put GOOGLE_SHEET_SECRET        # the same secret from step 1/2
+    ```
+
+If these two secrets are never set, the leaderboard silently no-ops (checkbox still shows, just
+does nothing) — the rest of the site is unaffected.
+
+Known limitation: the leaderboard is opt-in but not retractable — once a score is submitted to
+the sheet, un-checking the box on a later visit won't delete the row (delete it manually in the
+Sheet if needed).
+
+### 6. Installable (PWA)
+
+`public/manifest.json` + `public/sw.js` + `public/pwa.js` (registers the worker) are wired into
+every page. The service worker caches the static shell and network-first-caches
+`/api/today`/`/api/days` so a brief offline moment still shows the last-loaded content. No setup
+needed — it just works once deployed over HTTPS.
+
+One thing worth doing yourself: the manifest currently points at `favicon.svg` for icons. SVG
+icons render fine on Chrome/Edge/Android, but for the best iOS "Add to Home Screen" look, export
+dedicated 192×192 and 512×512 PNGs (from `book.png` or a simplified mark) and add them to the
+`icons` array in `manifest.json`.
+
+### 7. Build Your Own set — now 10–50 questions, plus your own topics
+
+`index.html`'s topic picker now has a question-count `<select>` (10/20/30/40/50) and a free-text
+"Add your own topic" input, capped at 10 topics total (checklist + custom combined). The backend
+(`getCustomPractice` in `worker/index.js`) matches free-typed topics loosely against `topic_tag`
+and question text (`LIKE`), so something like "idioms" still finds "Idioms & Phrases" questions.
+
+### 8. Telegram bot — push notifications, quiz polls, inactivity nudges, command parity
+
+All of this runs off the existing daily cron (`runDailyCron` in `worker/index.js`) — no new
+trigger needed:
+
+- **Proactive push**: every opted-in user (anyone who hasn't sent `/stop`) gets a "today's set is
+  ready" message right after the cron generates content — no more waiting for someone to ask
+  `/today`. On Sundays it also mentions the newly-unlocked Weekly Test (that reminder **only**
+  ever goes out via Telegram, never as a website popup).
+- **Native quiz polls**: a random Grammar/Vocabulary question goes out daily as a Telegram
+  `sendPoll` quiz (`type: "quiz"`) — answerable right in the chat, no browser needed.
+- **Inactivity nudges**: anyone who's practiced before but has gone quiet for 2+ days gets a
+  gentle "you're about to lose your streak" ping, once per day at most.
+- **Auto-send weekly scorecard**: the moment someone finishes the Sunday test, the PDF score card
+  is sent to their Telegram automatically (`weekly-test.html` calls the existing
+  `/api/telegram/send-pdf` right after grading — "Send to Telegram" is now just a manual fallback).
+- **Command parity**: `/mistakes` (open-mistake count) and `/streak` (current + best streak) join
+  the existing `/today`, `/week`, `/help`, `/start`. `/stop` pauses all daily/weekly pushes.
+  Note: `/mistakes` and `/streak` read from the `users` table, which is only populated once
+  someone has signed in with Telegram **and** synced at least once from the website — a purely
+  anonymous (never-signed-in) Telegram chat won't have this data yet.
+
+No extra secrets needed beyond the `TELEGRAM_BOT_TOKEN`/`TELEGRAM_WEBHOOK_SECRET` already set up
+in the previous round.
+
+### 9. New login type — sign in without leaving Telegram
+
+Two ways to sign in that never open the Telegram Login Widget popup:
+
+- **From the bot**: type `/login` in the chat → the bot replies with a one-tap link
+  (`/telegram-callback.html?login_code=...`). Opening it in any browser signs you in immediately.
+- **From the website**: the "Log in with Telegram" button's new **"Log in from Telegram"** option
+  requests a code (`POST /api/login/start`), opens `https://t.me/Tiny_english_robot?start=<code>`
+  in a new tab, and polls `GET /api/login/status/:code` until you approve it inside that chat
+  (just opening `/start` there is enough — Telegram itself is the confirmation).
+
+Both paths share the same `login_requests` table and a 15-minute code expiry; no new secrets.

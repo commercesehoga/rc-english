@@ -1,5 +1,6 @@
 // WonderMayank RC — shared local progress tracking
-// Everything here lives in localStorage on this device only (no login required).
+// Primary store is localStorage on this device. When signed in with Telegram, the same
+// blob is also pushed/pulled from the server (D1) so progress follows you across devices.
 // Loaded by index.html, practice.html, weekly-test.html, mistakes.html
 
 const WM = (function () {
@@ -7,9 +8,17 @@ const WM = (function () {
   const TG_KEY = 'wm_rc_telegram_user';
   const CATS = ['grammar', 'vocabulary', 'rc'];
   const MIN_STREAK_FOR_TEST = 5;
+  const MAX_INTERVAL_DAYS = 30;
+  const MASTER_AFTER_STREAK = 3; // consecutive correct retries before a mistake is retired
 
   function todayIST() {
     return new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  }
+
+  function addDays(dateStr, n) {
+    const d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
   }
 
   // Monday–Sunday bounds for the IST week containing dateStr — mirrors worker/index.js
@@ -24,18 +33,24 @@ const WM = (function () {
     return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) };
   }
 
+  function blank() {
+    return { completed: {}, mistakes: [], customPractice: {}, weeklyTests: {} };
+  }
+
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
       const parsed = raw ? JSON.parse(raw) : null;
-      return parsed || { completed: {}, mistakes: [], customPractice: {} };
+      const b = blank();
+      return parsed ? Object.assign(b, parsed) : b;
     } catch {
-      return { completed: {}, mistakes: [], customPractice: {} };
+      return blank();
     }
   }
 
   function save(state) {
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
+    scheduleSync();
   }
 
   // ---------- streaks ----------
@@ -79,7 +94,11 @@ const WM = (function () {
     return count;
   }
 
-  // ---------- mistakes ----------
+  // ---------- mistakes + basic spaced repetition ----------
+  // Each saved mistake carries dueDate/interval/correctStreak. Answer it right on a retry and
+  // the due date jumps further out (interval doubles, capped); answer wrong and it resets to
+  // "due again tomorrow". After a few clean retries in a row it's considered mastered and drops
+  // off the list entirely, so mistakes don't just pile up unread forever.
 
   function saveMistake(q, chosenLetter, date, category) {
     if (!q || !q.id) return;
@@ -96,12 +115,49 @@ const WM = (function () {
       explanation: q.explanation,
       topic: q.topic,
       savedAt: new Date().toISOString(),
+      dueDate: todayIST(),
+      interval: 1,
+      correctStreak: 0,
     });
     if (state.mistakes.length > 300) state.mistakes.length = 300;
     save(state);
   }
 
   function getMistakes() { return load().mistakes; }
+
+  function getDueMistakes() {
+    const today = todayIST();
+    return load().mistakes.filter((m) => !m.dueDate || m.dueDate <= today);
+  }
+
+  function upcomingMistakesCount() {
+    const today = todayIST();
+    return load().mistakes.filter((m) => m.dueDate && m.dueDate > today).length;
+  }
+
+  // Called from Retry-mode quiz after the person answers a resurfaced mistake.
+  function recordMistakeRetry(id, wasCorrect) {
+    const state = load();
+    const idx = state.mistakes.findIndex((m) => m.id === id);
+    if (idx === -1) return;
+    const m = state.mistakes[idx];
+    if (wasCorrect) {
+      m.correctStreak = (m.correctStreak || 0) + 1;
+      if (m.correctStreak >= MASTER_AFTER_STREAK) {
+        state.mistakes.splice(idx, 1); // mastered — retire it
+        save(state);
+        return { mastered: true };
+      }
+      m.interval = Math.min((m.interval || 1) * 2, MAX_INTERVAL_DAYS);
+      m.dueDate = addDays(todayIST(), m.interval);
+    } else {
+      m.correctStreak = 0;
+      m.interval = 1;
+      m.dueDate = todayIST(); // still due today/tomorrow, keep resurfacing
+    }
+    save(state);
+    return { mastered: false };
+  }
 
   function clearMistake(id) {
     const state = load();
@@ -130,7 +186,26 @@ const WM = (function () {
     save(state);
   }
 
-  // ---------- Telegram session (set after /api/auth/telegram succeeds) ----------
+  // ---------- weekly CBT test — one attempt per week, persisted so a refresh/reset can't retake it ----------
+
+  function isWeeklyTestDone(weekStart) {
+    const state = load();
+    return !!(state.weeklyTests && state.weeklyTests[weekStart]);
+  }
+
+  function getWeeklyTestResult(weekStart) {
+    const state = load();
+    return (state.weeklyTests && state.weeklyTests[weekStart]) || null;
+  }
+
+  function markWeeklyTestDone(weekStart, resultSummary) {
+    const state = load();
+    state.weeklyTests = state.weeklyTests || {};
+    state.weeklyTests[weekStart] = resultSummary;
+    save(state);
+  }
+
+  // ---------- Telegram session (set after /api/auth/telegram or /api/login/status succeeds) ----------
 
   function getTelegramUser() {
     try {
@@ -141,15 +216,94 @@ const WM = (function () {
 
   function setTelegramUser(user) {
     try { localStorage.setItem(TG_KEY, JSON.stringify(user)); } catch {}
+    pullProgress(); // new/returning sign-in — merge in whatever the server already has
   }
 
   function clearTelegramUser() { localStorage.removeItem(TG_KEY); }
 
+  // ---------- cross-device progress sync ----------
+  // Signed-in users get their whole blob (completed days, mistakes, custom-practice weeks,
+  // weekly-test results) mirrored to D1 keyed by telegram_id, so switching phones/laptops
+  // doesn't lose a streak or re-show an already-taken weekly test.
+
+  let syncTimer = null;
+  function scheduleSync() {
+    const user = getTelegramUser();
+    if (!user) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(pushProgress, 1200); // debounce rapid answer clicks into one call
+  }
+
+  async function pushProgress() {
+    const user = getTelegramUser();
+    if (!user) return;
+    try {
+      await fetch('/api/progress/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: user.id, blob: load() }),
+      });
+    } catch {}
+  }
+
+  function mergeBlobs(local, remote) {
+    const out = blank();
+    out.completed = JSON.parse(JSON.stringify(local.completed || {}));
+    for (const [date, cats] of Object.entries(remote.completed || {})) {
+      out.completed[date] = Object.assign({}, out.completed[date] || {}, cats);
+    }
+    const byId = new Map((local.mistakes || []).map((m) => [m.id, m]));
+    for (const rm of remote.mistakes || []) {
+      const lm = byId.get(rm.id);
+      if (!lm || new Date(rm.savedAt || 0) > new Date(lm.savedAt || 0)) byId.set(rm.id, rm);
+    }
+    out.mistakes = [...byId.values()].sort((a, b) => new Date(b.savedAt || 0) - new Date(a.savedAt || 0));
+    out.customPractice = Object.assign({}, remote.customPractice || {}, local.customPractice || {});
+    out.weeklyTests = Object.assign({}, remote.weeklyTests || {}, local.weeklyTests || {});
+    return out;
+  }
+
+  async function pullProgress() {
+    const user = getTelegramUser();
+    if (!user) return;
+    try {
+      const res = await fetch('/api/progress/' + user.id);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data || !data.blob) { pushProgress(); return; }
+      const merged = mergeBlobs(load(), data.blob);
+      localStorage.setItem(KEY, JSON.stringify(merged));
+      pushProgress();
+    } catch {}
+  }
+
+  // ---------- one-time login code polling (bot /login and "Get a link" on the site) ----------
+
+  async function pollLoginCode(code, onDone, opts) {
+    opts = opts || {};
+    const intervalMs = opts.intervalMs || 2500;
+    const timeoutMs = opts.timeoutMs || 180000;
+    const start = Date.now();
+    async function tick() {
+      if (Date.now() - start > timeoutMs) { onDone(null); return; }
+      try {
+        const res = await fetch('/api/login/status/' + encodeURIComponent(code));
+        const data = await res.json();
+        if (data.claimed && data.user) { onDone(data.user); return; }
+      } catch {}
+      setTimeout(tick, intervalMs);
+    }
+    tick();
+  }
+
   return {
     todayIST, weekBounds,
     markCategoryDone, currentStreak, daysCompletedThisWeek, MIN_STREAK_FOR_TEST,
-    saveMistake, getMistakes, clearMistake, clearAllMistakes,
+    saveMistake, getMistakes, getDueMistakes, upcomingMistakesCount, recordMistakeRetry,
+    clearMistake, clearAllMistakes,
     canDoCustomPracticeThisWeek, markCustomPracticeDone,
+    isWeeklyTestDone, getWeeklyTestResult, markWeeklyTestDone,
     getTelegramUser, setTelegramUser, clearTelegramUser,
+    pushProgress, pullProgress, pollLoginCode,
   };
 })();

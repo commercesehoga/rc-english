@@ -80,7 +80,28 @@
     }
   }
 
-  if (!params.id || !params.hash) {
+  if (params.login_code) {
+    // Opened via the bot's /login command link — the code is already self-claimed by the
+    // time this loads, so a single status check is enough (no widget hash to verify here).
+    fetch('/api/login/status/' + encodeURIComponent(params.login_code))
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.claimed && data.user) {
+          WM.setTelegramUser(data.user);
+          finish(true, 'You can close this tab and head back to WonderMayank.');
+          returnToSite(true);
+        } else {
+          finish(false, data.expired
+            ? 'This login link has expired — go back to Telegram and send /login again.'
+            : 'Couldn\u2019t confirm this login yet — try again from Telegram.');
+          returnToSite(false);
+        }
+      })
+      .catch((err) => {
+        finish(false, err.message || 'Something went wrong confirming your login.');
+        returnToSite(false);
+      });
+  } else if (!params.id || !params.hash) {
     finish(false, 'Telegram didn\u2019t send back any login data. Please try again.');
   } else {
     fetch('/api/auth/telegram', {

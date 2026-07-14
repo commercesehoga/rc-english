@@ -1,0 +1,21 @@
+{
+  "name": "WonderMayank — RC, Grammar & Vocabulary",
+  "short_name": "WonderMayank",
+  "description": "Free daily Reading Comprehension, Grammar and Vocabulary practice, plus a weekly CBT test every Sunday.",
+  "start_url": "/index.html",
+  "id": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FAF6EE",
+  "theme_color": "#B87E38",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Today's Practice", "url": "/practice.html", "description": "Today's Grammar, Vocabulary & RC set" },
+    { "name": "Weekly Test", "url": "/weekly-test.html", "description": "This week's CBT test" },
+    { "name": "Review Mistakes", "url": "/mistakes.html", "description": "Retry saved mistakes" }
+  ]
+}

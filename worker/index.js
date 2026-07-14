@@ -1,12 +1,18 @@
 // WonderMayank RC / Grammar / Vocabulary — Cloudflare Worker
-// Handles: daily question generation (Groq), D1 storage, archive lookup, weekly Sunday CBT test.
+// Handles: daily question generation (Groq), D1 storage, archive lookup, weekly Sunday CBT test,
+// cross-device progress sync, Google-Sheet-backed weekly leaderboard, and the Telegram bot
+// (push notifications, quiz polls, inactivity nudges, /login deep-link sign-in).
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
-// Used inside the Telegram bot's replies (/start, /today, /week). Update this if/when you
-// put the app on a custom domain (Settings → Domains & Routes) — see README section 8.
-const SITE_URL = "https://english.thunderstudy.indevs.in"; // used in the bot's /start, /today, /week replies
+// Used inside the Telegram bot's replies (/start, /today, /week) and push notifications.
+// Update this if/when you put the app on a custom domain (Settings → Domains & Routes).
+const SITE_URL = "https://english.thunderstudy.indevs.in";
+
+// Public @username of the bot (no @, no https://t.me/) — used to build t.me?start= deep links
+// for the new "log in from inside Telegram" flow.
+const BOT_USERNAME = "Tiny_english_robot";
 
 export default {
   async fetch(request, env, ctx) {
@@ -19,11 +25,20 @@ export default {
     return env.ASSETS.fetch(request);
   },
 
-  // Cron trigger — see [triggers] in wrangler.toml (runs once daily).
+  // Cron trigger — see [triggers] in wrangler.toml (runs once daily, ~6 AM IST).
   async scheduled(controller, env, ctx) {
-    ctx.waitUntil(generateDailyContent(env, getISTDateString()));
+    ctx.waitUntil(runDailyCron(env, getISTDateString()));
   },
 };
+
+// Generates the day's content, then pushes it out (proactive "today's set is ready" message +
+// a quiz poll + the Sunday weekly-test nudge) and checks for anyone who's gone quiet.
+// Each step is independently try/caught downstream so one failure never blocks the others.
+async function runDailyCron(env, date) {
+  await generateDailyContent(env, date);
+  await pushMorningNotifications(env, date);
+  await sendInactivityNudges(env, date);
+}
 
 // ---------- routing ----------
 
@@ -66,7 +81,51 @@ async function handleApi(request, env, url) {
         .map((t) => t.trim())
         .filter(Boolean)
         .slice(0, 10);
-      return json(await getCustomPractice(env, topics), headers);
+      const count = url.searchParams.get("count");
+      return json(await getCustomPractice(env, topics, count), headers);
+    }
+
+    // Passage archive filter/search — jump straight to a day by topic (inference/tone/theme/
+    // detail/etc.) or a keyword, instead of paging back one day at a time.
+    if (pathname === "/api/archive/search" && request.method === "GET") {
+      return json(
+        await searchArchive(env, {
+          category: url.searchParams.get("category") || "rc",
+          topic: url.searchParams.get("topic") || "",
+          q: url.searchParams.get("q") || "",
+        }),
+        headers
+      );
+    }
+
+    if (pathname === "/api/progress/sync" && request.method === "POST") {
+      return json(await handleProgressSync(env, request), headers);
+    }
+
+    const progressMatch = pathname.match(/^\/api\/progress\/(\d+)$/);
+    if (progressMatch && request.method === "GET") {
+      return json(await handleProgressGet(env, progressMatch[1]), headers);
+    }
+
+    if (pathname === "/api/leaderboard/submit" && request.method === "POST") {
+      return json(await handleLeaderboardSubmit(env, request), headers);
+    }
+
+    const lbMatch = pathname.match(/^\/api\/leaderboard\/(\d{4}-\d{2}-\d{2})$/);
+    if (lbMatch && request.method === "GET") {
+      return json(await fetchLeaderboard(env, lbMatch[1]), headers);
+    }
+
+    // "Log in from inside Telegram" — the site creates a code, the person approves it either
+    // via the bot's /login command or by opening the t.me?start= deep link, and the site polls
+    // this status endpoint until it's claimed. No Telegram Login Widget popup needed.
+    if (pathname === "/api/login/start" && request.method === "POST") {
+      return json(await handleLoginStart(env), headers);
+    }
+
+    const loginStatusMatch = pathname.match(/^\/api\/login\/status\/([a-zA-Z0-9]+)$/);
+    if (loginStatusMatch && request.method === "GET") {
+      return json(await handleLoginStatus(env, loginStatusMatch[1]), headers);
     }
 
     if (pathname === "/api/auth/telegram" && request.method === "POST") {
@@ -310,6 +369,36 @@ async function listAvailableDays(env) {
   return { days: (rows.results || []).map((r) => ({ date: r.date, count: r.count })) };
 }
 
+// ---------- passage archive filter/search ----------
+// Lets someone jump straight to a past day by topic (inference/tone/theme/detail/vocabulary)
+// or a keyword, instead of paging back through the archive one day at a time.
+async function searchArchive(env, { category, topic, q }) {
+  const cat = category || "rc";
+  let sql = `SELECT date, topic_tag, passage, question FROM daily_content WHERE category = ?`;
+  const params = [cat];
+  if (topic) {
+    sql += ` AND topic_tag = ?`;
+    params.push(topic);
+  }
+  if (q) {
+    sql += ` AND (passage LIKE ? OR question LIKE ?)`;
+    params.push(`%${q}%`, `%${q}%`);
+  }
+  sql += ` ORDER BY date DESC LIMIT 60`;
+
+  const rows = await env.DB.prepare(sql).bind(...params).all();
+  const byDate = new Map();
+  for (const r of rows.results || []) {
+    if (!byDate.has(r.date)) {
+      byDate.set(r.date, { date: r.date, topics: new Set(), snippet: (r.passage || r.question || "").slice(0, 160) });
+    }
+    if (r.topic_tag) byDate.get(r.date).topics.add(r.topic_tag);
+  }
+  return {
+    results: [...byDate.values()].map((d) => ({ date: d.date, topics: [...d.topics], snippet: d.snippet })),
+  };
+}
+
 // ---------- weekly Sunday CBT test ----------
 
 async function getWeekStatus(env) {
@@ -378,16 +467,22 @@ async function getWeeklyTest(env, weekStart) {
   return buildWeeklyTestPayload(env, weekStart, existing.week_end, JSON.parse(existing.question_ids));
 }
 
-// ---------- weekly topic-picker practice (up to 10 topics, 10 questions, pulled from the full archive) ----------
+// ---------- weekly topic-picker practice (up to 10 topics, 10-50 questions, pulled from the full archive) ----------
+// Topics can be exact tags from the fixed checklist (Tenses, Synonyms, inference, ...) or a
+// free-text topic the person typed themselves — matched loosely against topic_tag/question text
+// so a typed word like "idioms" still finds "Idioms & Phrases" questions.
 
-async function getCustomPractice(env, topics) {
+async function getCustomPractice(env, topics, countParam) {
   if (!topics.length) throw new Error("Select at least one topic.");
-  const placeholders = topics.map(() => "?").join(",");
+  const count = Math.min(Math.max(parseInt(countParam, 10) || 10, 10), 50);
+  const conditions = topics.map(() => `(topic_tag = ? OR topic_tag LIKE ? OR question LIKE ?)`).join(" OR ");
+  const params = [];
+  topics.forEach((t) => params.push(t, `%${t}%`, `%${t}%`));
   const rows = await env.DB.prepare(
     `SELECT id, category, passage, question, option_a, option_b, option_c, option_d, correct_option, explanation, topic_tag, difficulty, date
-     FROM daily_content WHERE topic_tag IN (${placeholders}) ORDER BY RANDOM() LIMIT 10`
+     FROM daily_content WHERE ${conditions} ORDER BY RANDOM() LIMIT ?`
   )
-    .bind(...topics)
+    .bind(...params, count)
     .all();
 
   const questions = (rows.results || []).map((r) => ({
@@ -407,6 +502,191 @@ async function getCustomPractice(env, topics) {
     throw new Error("No archived questions match those topics yet — check back after a few more days of content.");
   }
   return { topics, totalQuestions: questions.length, questions };
+}
+
+// ---------- cross-device progress sync ----------
+// The client's whole localStorage blob (completed days, mistakes, custom-practice weeks,
+// weekly-test results) is mirrored here keyed by telegram_id, and also condensed into a few
+// summary columns on `users` so the bot's /streak and /mistakes commands don't need to touch
+// the full blob.
+
+function addDaysStr(dateStr, n) {
+  const d = new Date(dateStr + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function computeProgressSummary(blob) {
+  const completed = blob.completed || {};
+  const CATS = ["grammar", "vocabulary", "rc"];
+  const isFull = (d) => {
+    const c = completed[d];
+    return !!c && CATS.every((cat) => c[cat]);
+  };
+
+  let current = 0;
+  let d = getISTDateString();
+  while (isFull(d)) {
+    current++;
+    d = addDaysStr(d, -1);
+  }
+
+  const fullDates = Object.keys(completed).filter(isFull).sort();
+  let best = 0, run = 0, prev = null;
+  for (const dt of fullDates) {
+    run = prev && addDaysStr(prev, 1) === dt ? run + 1 : 1;
+    if (run > best) best = run;
+    prev = dt;
+  }
+  best = Math.max(best, current);
+
+  let lastActive = null;
+  for (const dt of Object.keys(completed).sort()) {
+    const c = completed[dt];
+    if (c && CATS.some((cat) => c[cat])) lastActive = dt;
+  }
+
+  return { current, best, mistakesOpen: (blob.mistakes || []).length, lastActive };
+}
+
+async function handleProgressSync(env, request) {
+  const { telegram_id, blob } = await request.json();
+  if (!telegram_id || !blob) throw new Error("telegram_id and blob are required.");
+
+  await env.DB.prepare(
+    `INSERT INTO user_progress (telegram_id, blob, updated_at) VALUES (?, ?, datetime('now'))
+     ON CONFLICT(telegram_id) DO UPDATE SET blob = excluded.blob, updated_at = datetime('now')`
+  )
+    .bind(telegram_id, JSON.stringify(blob))
+    .run();
+
+  const summary = computeProgressSummary(blob);
+  await env.DB.prepare(
+    `UPDATE users SET current_streak = ?, best_streak = ?, mistakes_open = ?,
+       last_active_date = COALESCE(?, last_active_date) WHERE telegram_id = ?`
+  )
+    .bind(summary.current, summary.best, summary.mistakesOpen, summary.lastActive, telegram_id)
+    .run();
+
+  return { ok: true };
+}
+
+async function handleProgressGet(env, telegramId) {
+  const row = await env.DB.prepare(`SELECT blob FROM user_progress WHERE telegram_id = ?`).bind(telegramId).first();
+  return { blob: row ? JSON.parse(row.blob) : null };
+}
+
+// ---------- weekly leaderboard (stored in a Google Sheet, not D1 — see README §Leaderboard) ----------
+// A tiny Apps Script Web App acts as the "database": POST appends a row, GET returns all rows
+// as JSON. This keeps a spreadsheet as the single source of truth, which is easy for a non-dev
+// to open and eyeball, and needs no extra service beyond what's already free.
+
+async function submitScoreToSheet(env, payload) {
+  if (!env.GOOGLE_SHEET_WEBAPP_URL) return; // leaderboard not configured — skip quietly
+  const body = new URLSearchParams({ ...payload, secret: env.GOOGLE_SHEET_SECRET || "" });
+  await fetch(env.GOOGLE_SHEET_WEBAPP_URL, { method: "POST", body });
+}
+
+async function fetchLeaderboard(env, weekStart) {
+  if (!env.GOOGLE_SHEET_WEBAPP_URL) return { configured: false, scores: [] };
+  const u = `${env.GOOGLE_SHEET_WEBAPP_URL}?week=${encodeURIComponent(weekStart)}&secret=${encodeURIComponent(env.GOOGLE_SHEET_SECRET || "")}`;
+  try {
+    const res = await fetch(u);
+    if (!res.ok) return { configured: true, scores: [] };
+    const data = await res.json();
+    const scores = (data.rows || [])
+      .filter((r) => r.week_start === weekStart)
+      .sort((a, b) => Number(b.pct) - Number(a.pct))
+      .slice(0, 10)
+      .map((r) => ({ first_name: r.first_name || "Student", pct: Number(r.pct) }));
+    return { configured: true, scores };
+  } catch {
+    return { configured: true, scores: [] };
+  }
+}
+
+async function handleLeaderboardSubmit(env, request) {
+  const { telegram_id, week_start, pct, opt_in } = await request.json();
+  if (!telegram_id || !week_start || pct == null) throw new Error("telegram_id, week_start and pct are required.");
+  if (opt_in === false) return { ok: true, skipped: true };
+
+  const already = await env.DB.prepare(
+    `SELECT 1 FROM leaderboard_submissions WHERE telegram_id = ? AND week_start = ?`
+  )
+    .bind(telegram_id, week_start)
+    .first();
+  if (already) return { ok: true, duplicate: true };
+
+  const user = await env.DB.prepare(`SELECT first_name FROM users WHERE telegram_id = ?`).bind(telegram_id).first();
+  await submitScoreToSheet(env, {
+    telegram_id: String(telegram_id),
+    week_start,
+    pct: String(pct),
+    first_name: user?.first_name || "Student",
+  });
+  await env.DB.prepare(`INSERT INTO leaderboard_submissions (telegram_id, week_start, pct) VALUES (?, ?, ?)`)
+    .bind(telegram_id, week_start, pct)
+    .run();
+
+  return { ok: true };
+}
+
+// ---------- "log in from inside Telegram" (deep link, no widget popup) ----------
+// The site asks for a one-time code, shows a "Continue in Telegram" button pointing at
+// https://t.me/<bot>?start=<code>, and the person approves it inside their own chat with the
+// bot — no OAuth popup, no domain whitelisting quirks. The bot's own /login command creates
+// and self-claims a code the same way, for the reverse direction.
+
+function randomCode() {
+  return crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+}
+
+async function upsertUser(env, u) {
+  await env.DB.prepare(
+    `INSERT INTO users (telegram_id, username, first_name, photo_url, last_seen_at)
+     VALUES (?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(telegram_id) DO UPDATE SET
+       username = excluded.username,
+       first_name = excluded.first_name,
+       photo_url = excluded.photo_url,
+       last_seen_at = datetime('now')`
+  )
+    .bind(u.id, u.username || null, u.first_name || null, u.photo_url || null)
+    .run();
+}
+
+async function handleLoginStart(env) {
+  const code = randomCode();
+  await env.DB.prepare(`INSERT INTO login_requests (code) VALUES (?)`).bind(code).run();
+  const botUsername = env.TELEGRAM_BOT_USERNAME || BOT_USERNAME;
+  return { code, botLink: `https://t.me/${botUsername}?start=${code}` };
+}
+
+async function handleLoginStatus(env, code) {
+  const row = await env.DB.prepare(
+    `SELECT telegram_id, claimed_user, claimed_at, created_at FROM login_requests WHERE code = ?`
+  )
+    .bind(code)
+    .first();
+  if (!row) return { claimed: false, expired: true };
+
+  const ageMs = Date.now() - new Date(row.created_at.replace(" ", "T") + "Z").getTime();
+  if (!row.claimed_at && ageMs > 15 * 60 * 1000) return { claimed: false, expired: true };
+  if (!row.claimed_at) return { claimed: false };
+  return { claimed: true, user: JSON.parse(row.claimed_user) };
+}
+
+// Called from the bot webhook once a code is approved (either via /start <code> or /login).
+async function claimLoginCode(env, code, tgUser) {
+  const row = await env.DB.prepare(`SELECT claimed_at FROM login_requests WHERE code = ?`).bind(code).first();
+  if (!row || row.claimed_at) return false;
+  await upsertUser(env, tgUser);
+  await env.DB.prepare(
+    `UPDATE login_requests SET telegram_id = ?, claimed_user = ?, claimed_at = datetime('now') WHERE code = ?`
+  )
+    .bind(tgUser.id, JSON.stringify(tgUser), code)
+    .run();
+  return true;
 }
 
 // ---------- Telegram sign-in + bot delivery ----------
@@ -460,17 +740,7 @@ async function handleTelegramAuth(env, request) {
   const valid = await verifyTelegramAuth(data, env.TELEGRAM_BOT_TOKEN);
   if (!valid) throw new Error("Telegram login verification failed.");
 
-  await env.DB.prepare(
-    `INSERT INTO users (telegram_id, username, first_name, photo_url, last_seen_at)
-     VALUES (?, ?, ?, ?, datetime('now'))
-     ON CONFLICT(telegram_id) DO UPDATE SET
-       username = excluded.username,
-       first_name = excluded.first_name,
-       photo_url = excluded.photo_url,
-       last_seen_at = datetime('now')`
-  )
-    .bind(data.id, data.username || null, data.first_name || null, data.photo_url || null)
-    .run();
+  await upsertUser(env, { id: data.id, username: data.username, first_name: data.first_name, photo_url: data.photo_url });
 
   // Confirm it worked right inside the chat with the bot. This can fail silently if the person
   // has never opened a chat with @Tiny_english_robot before — Telegram requires that before a
@@ -505,6 +775,108 @@ async function handleTelegramNotify(env, request) {
   if (!telegram_id || !message) throw new Error("telegram_id and message are required.");
   await sendTelegramMessage(env, telegram_id, message);
   return { ok: true };
+}
+
+// Sends a native Telegram quiz poll (sendPoll, type: quiz) — answerable right inside the chat,
+// no browser needed. Telegram itself reveals the correct answer + explanation once tapped.
+async function sendTelegramQuiz(env, chatId, row) {
+  const letters = ["a", "b", "c", "d"];
+  const options = [row.option_a, row.option_b, row.option_c, row.option_d].map((o) => (o || "").slice(0, 100));
+  const correctIdx = Math.max(0, letters.indexOf((row.correct_option || "a").toLowerCase()));
+
+  const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPoll`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      question: (row.question || "").slice(0, 300),
+      options,
+      type: "quiz",
+      correct_option_id: correctIdx,
+      explanation: (row.explanation || "").slice(0, 200),
+      is_anonymous: true,
+    }),
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.description || "sendPoll failed");
+  return data;
+}
+
+function daysBetween(a, b) {
+  const da = new Date(a + "T00:00:00Z");
+  const db = new Date(b + "T00:00:00Z");
+  return Math.round((db - da) / 86400000);
+}
+
+// Push, don't just pull: loops every opted-in user once the cron has generated today's content
+// and proactively messages them, instead of waiting for someone to type /today. On Sundays this
+// also mentions the newly-unlocked Weekly Test — that reminder only ever goes out via Telegram,
+// never as any kind of website popup/notification.
+async function pushMorningNotifications(env, date) {
+  if (!env.TELEGRAM_BOT_TOKEN) return;
+  const isSunday = getISTDayOfWeek() === 0;
+
+  const rows = await env.DB.prepare(
+    `SELECT telegram_id, first_name, last_push_date FROM users WHERE COALESCE(opt_out_push, 0) = 0`
+  ).all();
+  const users = rows.results || [];
+  if (!users.length) return;
+
+  // One quick 1-question quiz poll alongside the push, best-effort (grammar/vocab reads better
+  // as a standalone poll question than an RC question, which needs the passage for context).
+  const quizRow = await env.DB.prepare(
+    `SELECT question, option_a, option_b, option_c, option_d, correct_option, explanation
+     FROM daily_content WHERE date = ? AND category IN ('grammar','vocabulary') ORDER BY RANDOM() LIMIT 1`
+  )
+    .bind(date)
+    .first();
+
+  for (const u of users) {
+    if (u.last_push_date === date) continue; // already pushed today — cron shouldn't double-run, but be safe
+    try {
+      const greeting = u.first_name ? `Hi ${u.first_name}! ` : "";
+      const weeklyLine = isSunday ? `\n\n🗓️ It's Sunday — the Weekly Test is unlocked!\n${SITE_URL}/weekly-test.html` : "";
+      await sendTelegramMessage(
+        env,
+        u.telegram_id,
+        `☀️ ${greeting}Today's Grammar, Vocabulary &amp; RC set is ready.\n${SITE_URL}/practice.html${weeklyLine}`
+      );
+      if (quizRow) {
+        try { await sendTelegramQuiz(env, u.telegram_id, quizRow); } catch (e) { /* poll is a bonus, not critical */ }
+      }
+      await env.DB.prepare(`UPDATE users SET last_push_date = ? WHERE telegram_id = ?`).bind(date, u.telegram_id).run();
+    } catch (err) {
+      // Most likely they blocked the bot — skip and move on to the next user.
+    }
+  }
+}
+
+// "You're about to lose your streak" nudges — anyone who's practiced before but has gone 2+
+// days quiet gets a gentle ping, once per day at most.
+async function sendInactivityNudges(env, date) {
+  if (!env.TELEGRAM_BOT_TOKEN) return;
+  const rows = await env.DB.prepare(
+    `SELECT telegram_id, first_name, last_active_date, current_streak, last_nudge_date
+     FROM users WHERE COALESCE(opt_out_push, 0) = 0`
+  ).all();
+
+  for (const u of rows.results || []) {
+    if (!u.last_active_date) continue; // never practiced yet — not a "losing a streak" situation
+    if (u.last_nudge_date === date) continue;
+    const gap = daysBetween(u.last_active_date, date);
+    if (gap < 2) continue;
+    try {
+      const streakLine = u.current_streak > 0 ? ` — your ${u.current_streak}-day streak is at risk` : "";
+      await sendTelegramMessage(
+        env,
+        u.telegram_id,
+        `⏳ ${u.first_name ? u.first_name + ", " : ""}you haven't practiced in ${gap} days${streakLine}. A set takes about 5 minutes:\n${SITE_URL}/practice.html`
+      );
+      await env.DB.prepare(`UPDATE users SET last_nudge_date = ? WHERE telegram_id = ?`).bind(date, u.telegram_id).run();
+    } catch (err) {
+      // Blocked bot or transient failure — try again on the next quiet day.
+    }
+  }
 }
 
 async function handleTelegramSendPdf(env, request) {
@@ -556,20 +928,36 @@ async function handleTelegramWebhook(env, request) {
     const text = msg.text.trim();
 
     try {
-      if (text === "/start" || text.startsWith("/start ")) {
+      const startPayloadMatch = text.match(/^\/start\s+(\S+)$/);
+
+      if (startPayloadMatch) {
+        // Deep link from the website's "Continue in Telegram" login button: /start <code>
+        const code = startPayloadMatch[1];
+        const tgUser = { id: chatId, username: msg.from.username, first_name: msg.from.first_name, photo_url: null };
+        const claimed = await claimLoginCode(env, code, tgUser);
+        await env.DB.prepare(`UPDATE users SET opt_out_push = 0 WHERE telegram_id = ?`).bind(chatId).run();
+        await sendTelegramMessage(
+          env,
+          chatId,
+          claimed
+            ? `✅ Logged in! Go back to your browser tab — it'll sign you in within a couple seconds.`
+            : `That login link has expired or was already used. Open the site again and tap "Log in with Telegram" for a fresh one.\n${SITE_URL}`
+        );
+      } else if (text === "/start") {
+        await env.DB.prepare(`UPDATE users SET opt_out_push = 0 WHERE telegram_id = ?`).bind(chatId).run();
         await sendTelegramMessage(
           env,
           chatId,
           `👋 Welcome to <b>WonderMayank — RC / Grammar / Vocabulary</b>!\n\n` +
-            `Sign in with Telegram on the website and I'll send your weekly score card here automatically.\n\n` +
+            `Sign in with Telegram on the website (or just type /login here) and I'll push today's set every morning and send your weekly score card automatically.\n\n` +
             `🔗 ${SITE_URL}\n\n` +
-            `Commands:\n/today — today's practice link\n/week — this week's test status\n/help — show this again`
+            `Commands:\n/today — today's practice link\n/week — this week's test status\n/streak — your current & best streak\n/mistakes — saved mistakes waiting for review\n/login — get a one-tap sign-in link for the browser\n/stop — pause daily/weekly messages\n/help — show this again`
         );
       } else if (text === "/help") {
         await sendTelegramMessage(
           env,
           chatId,
-          `Commands:\n/today — today's practice link\n/week — this week's test status\n/start — welcome message`
+          `Commands:\n/today — today's practice link\n/week — this week's test status\n/streak — your current & best streak\n/mistakes — saved mistakes waiting for review\n/login — get a one-tap sign-in link for the browser\n/stop — pause daily/weekly messages\n/start — welcome message`
         );
       } else if (text === "/today") {
         await sendTelegramMessage(env, chatId, `📚 Today's Grammar, Vocabulary &amp; RC practice:\n${SITE_URL}/practice.html`);
@@ -581,6 +969,40 @@ async function handleTelegramWebhook(env, request) {
             : "It's Sunday — the weekly test is unlocked, go generate it!"
           : `Not Sunday yet — ${status.questionsThisWeek} questions logged so far this week.`;
         await sendTelegramMessage(env, chatId, `🗓️ ${line}\n${SITE_URL}/weekly-test.html`);
+      } else if (text === "/streak") {
+        const u = await env.DB.prepare(`SELECT current_streak, best_streak FROM users WHERE telegram_id = ?`).bind(chatId).first();
+        await sendTelegramMessage(
+          env,
+          chatId,
+          `🔥 Current streak: <b>${u?.current_streak || 0}</b> day(s)\n🏆 Best streak: <b>${u?.best_streak || 0}</b> day(s)\n\n(This updates once you've signed in and practiced on the website.)`
+        );
+      } else if (text === "/mistakes") {
+        const u = await env.DB.prepare(`SELECT mistakes_open FROM users WHERE telegram_id = ?`).bind(chatId).first();
+        const n = u?.mistakes_open || 0;
+        await sendTelegramMessage(
+          env,
+          chatId,
+          n > 0
+            ? `📝 You have <b>${n}</b> saved mistake(s) waiting for review.\n${SITE_URL}/mistakes.html`
+            : `🎉 No open mistakes saved — you're all caught up!\n${SITE_URL}/mistakes.html`
+        );
+      } else if (text === "/login") {
+        const code = randomCode();
+        const tgUser = { id: chatId, username: msg.from.username, first_name: msg.from.first_name, photo_url: null };
+        await env.DB.prepare(
+          `INSERT INTO login_requests (code, telegram_id, claimed_user, claimed_at) VALUES (?, ?, ?, datetime('now'))`
+        )
+          .bind(code, chatId, JSON.stringify(tgUser))
+          .run();
+        await upsertUser(env, tgUser);
+        await sendTelegramMessage(
+          env,
+          chatId,
+          `🔗 Tap to open and sign in automatically — no password needed:\n${SITE_URL}/telegram-callback.html?login_code=${code}\n\n(Works once, expires in 15 minutes.)`
+        );
+      } else if (text === "/stop") {
+        await env.DB.prepare(`UPDATE users SET opt_out_push = 1 WHERE telegram_id = ?`).bind(chatId).run();
+        await sendTelegramMessage(env, chatId, "🔕 Okay — no more daily/weekly pushes. Send /start anytime to turn them back on.");
       } else {
         await sendTelegramMessage(env, chatId, "Not sure what you mean — try /help.");
       }

@@ -9,6 +9,8 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="favicon.svg">
 <link rel="apple-touch-icon" href="favicon.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#B87E38">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="WonderMayank">
@@ -43,6 +45,7 @@
 <div id="root" class="wrap"></div>
 
 <script src="progress.js"></script>
+<script src="pwa.js"></script>
 <script>
 document.getElementById('streak-badge').textContent = WM.currentStreak() > 0 ? `\u{1F525} ${WM.currentStreak()} day streak` : '';
 
@@ -70,7 +73,27 @@ async function loadStatus() {
   root.innerHTML = '<div class="loading-state">Checking this week\'s status…</div>';
   const res = await fetch('/api/week/status');
   const status = await res.json();
-  renderLocked(status);
+  if (WM.getTelegramUser()) { try { await WM.pullProgress(); } catch {} } // pick up a result taken on another device first
+  if (WM.isWeeklyTestDone(status.weekStart)) {
+    renderAlreadyDone(status);
+  } else {
+    renderLocked(status);
+  }
+}
+
+// One attempt per week — persisted locally (and synced to the server when signed in), so a
+// refresh, a cleared cache, or a new tab can't be used to retake an already-completed test.
+function renderAlreadyDone(status) {
+  const result = WM.getWeeklyTestResult(status.weekStart);
+  root.innerHTML = `
+    <div class="week-hero">
+      <span class="week-status-pill open">Already completed</span>
+      <h2>Week of ${status.weekStart} → ${status.weekEnd}</h2>
+      <p>You've already taken this week's test — nice work! Come back after ${status.weekEnd} for the next one.</p>
+    </div>
+    <div id="result-area"></div>
+  `;
+  renderResultScreen(result, { locked: true });
 }
 
 function renderLocked(status) {
@@ -271,10 +294,75 @@ function submitTest() {
     }
   });
 
-  const lastResult = { correct, wrong, unattempted, total, pct, weekStart: testData.weekStart, weekEnd: testData.weekEnd, byCategory };
-  const tgUser = WM.getTelegramUser();
+  // Full review data is saved alongside the summary so the "already completed" screen can
+  // rebuild the same result view later without needing the original testData in memory.
+  const reviewQuestions = testData.questions.map(q => ({
+    category: q.category, question: q.question, options: q.options, correct: q.correct,
+    given: answers[q.id] || null, explanation: q.explanation,
+  }));
 
-  root.innerHTML = `
+  const lastResult = {
+    correct, wrong, unattempted, total, pct,
+    weekStart: testData.weekStart, weekEnd: testData.weekEnd, byCategory, reviewQuestions,
+  };
+
+  WM.markWeeklyTestDone(testData.weekStart, lastResult);
+  root.innerHTML = `<div id="result-area"></div>`;
+  renderResultScreen(lastResult, { locked: false });
+}
+
+async function sendScorecardToTelegram(lastResult, btn) {
+  const user = WM.getTelegramUser();
+  if (!user) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  try {
+    const blob = generateScorePdf(lastResult).output('blob');
+    const fd = new FormData();
+    fd.append('telegram_id', user.id);
+    fd.append('file', blob, 'weekly-score.pdf');
+    const res = await fetch('/api/telegram/send-pdf', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    if (btn) btn.textContent = 'Sent ✓';
+    return true;
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Send to Telegram'; }
+    return false;
+  }
+}
+
+async function renderLeaderboard(weekStart, container) {
+  container.innerHTML = '<div class="loading-state">Loading leaderboard…</div>';
+  try {
+    const res = await fetch('/api/leaderboard/' + weekStart);
+    const data = await res.json();
+    if (!data.configured) { container.innerHTML = ''; return; }
+    if (!data.scores || !data.scores.length) {
+      container.innerHTML = `<div class="leaderboard-card"><h3>🏆 This Week's Top Scorers</h3><p style="color:var(--text-muted); font-size:13.5px;">No scores yet — be the first!</p></div>`;
+      return;
+    }
+    container.innerHTML = `
+      <div class="leaderboard-card">
+        <h3>🏆 This Week's Top Scorers</h3>
+        ${data.scores.map((s, i) => `
+          <div class="leaderboard-row">
+            <span class="leaderboard-rank">#${i + 1}</span>
+            <span class="leaderboard-name">${s.first_name}</span>
+            <span class="leaderboard-pct">${s.pct}%</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } catch { container.innerHTML = ''; }
+}
+
+// Shared by the fresh-submit path and the "already completed this week" path.
+function renderResultScreen(lastResult, { locked }) {
+  const { correct, wrong, unattempted, total, pct, weekStart, reviewQuestions } = lastResult;
+  const tgUser = WM.getTelegramUser();
+  const area = document.getElementById('result-area');
+
+  area.innerHTML = `
     <div class="cbt-shell">
       <div class="result-summary">
         <div style="font-size:13px; color:var(--text-muted); font-weight:600;">WEEKLY TEST RESULT</div>
@@ -289,39 +377,45 @@ function submitTest() {
           <button id="download-pdf-btn" class="btn btn-secondary">Download Score PDF</button>
           <button id="send-telegram-btn" class="btn btn-secondary" ${tgUser ? '' : 'disabled title="Sign in with Telegram on the homepage first"'}>Send to Telegram</button>
         </div>
+        ${tgUser ? `
+          <label class="leaderboard-optin">
+            <input type="checkbox" id="leaderboard-optin-cb">
+            Show my score (first name + %) on this week's leaderboard
+          </label>
+        ` : ''}
       </div>
+      <div id="leaderboard-area"></div>
       <div id="review-list"></div>
     </div>
   `;
 
   document.getElementById('download-pdf-btn').addEventListener('click', () => {
-    generateScorePdf(lastResult).save(`weekly-score-${lastResult.weekStart}.pdf`);
+    generateScorePdf(lastResult).save(`weekly-score-${weekStart}.pdf`);
   });
 
-  document.getElementById('send-telegram-btn').addEventListener('click', async () => {
-    const user = WM.getTelegramUser();
-    if (!user) { alert('Sign in with Telegram on the homepage first.'); return; }
-    const btn = document.getElementById('send-telegram-btn');
-    btn.disabled = true; btn.textContent = 'Sending…';
-    try {
-      const blob = generateScorePdf(lastResult).output('blob');
-      const fd = new FormData();
-      fd.append('telegram_id', user.id);
-      fd.append('file', blob, 'weekly-score.pdf');
-      const res = await fetch('/api/telegram/send-pdf', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      btn.textContent = 'Sent ✓';
-    } catch (err) {
-      alert('Could not send: ' + err.message);
-      btn.disabled = false; btn.textContent = 'Send to Telegram';
-    }
-  });
+  const sendBtn = document.getElementById('send-telegram-btn');
+  sendBtn.addEventListener('click', () => sendScorecardToTelegram(lastResult, sendBtn));
+
+  // Auto-send the moment a fresh submission finishes — "Send to Telegram" becomes a manual
+  // fallback rather than a required step.
+  if (!locked && tgUser) sendScorecardToTelegram(lastResult, sendBtn);
+
+  if (tgUser) {
+    document.getElementById('leaderboard-optin-cb').addEventListener('change', async (e) => {
+      if (!e.target.checked) return;
+      await fetch('/api/leaderboard/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: tgUser.id, week_start: weekStart, pct, opt_in: true }),
+      }).catch(() => {});
+      renderLeaderboard(weekStart, document.getElementById('leaderboard-area'));
+    });
+  }
+  renderLeaderboard(weekStart, document.getElementById('leaderboard-area'));
 
   const reviewList = document.getElementById('review-list');
-  reviewList.innerHTML = testData.questions.map((q, i) => {
-    const given = answers[q.id];
-    const isCorrect = given === q.correct;
+  reviewList.innerHTML = reviewQuestions.map((q, i) => {
+    const isCorrect = q.given === q.correct;
     return `
       <div class="q-card">
         <div class="q-meta">
@@ -333,11 +427,11 @@ function submitTest() {
           ${['a','b','c','d'].map(l => {
             let cls = 'option';
             if (l === q.correct) cls += ' correct';
-            else if (l === given && !isCorrect) cls += ' wrong';
+            else if (l === q.given && !isCorrect) cls += ' wrong';
             return `<div class="${cls}"><span class="letter">${l.toUpperCase()}</span> ${q.options[l]}</div>`;
           }).join('')}
         </div>
-        <div class="explanation show">${q.explanation || ''} ${!given ? '<br><em>Not attempted.</em>' : ''}</div>
+        <div class="explanation show">${q.explanation || ''} ${!q.given ? '<br><em>Not attempted.</em>' : ''}</div>
       </div>
     `;
   }).join('');

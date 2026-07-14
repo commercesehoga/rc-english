@@ -9,6 +9,8 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="favicon.svg">
 <link rel="apple-touch-icon" href="favicon.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#B87E38">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="WonderMayank">
@@ -120,12 +122,27 @@
   <div class="section-head">
     <div>
       <span class="eyebrow-label">Once a week</span>
-      <h2 class="section-title">Build Your Own 10-Question Set</h2>
-      <p class="section-desc">Pick up to 10 topics to focus on. This resets every Monday.</p>
+      <h2 class="section-title">Build Your Own Question Set</h2>
+      <p class="section-desc">Pick up to 10 topics (or add your own) and choose how many questions. This resets every Monday.</p>
     </div>
   </div>
   <div class="topic-picker-card">
     <div id="topic-checklist" class="topic-checklist"></div>
+    <div class="custom-topic-add">
+      <input type="text" id="custom-topic-input" placeholder="Add your own topic (e.g. Idioms, Cloze Test)" maxlength="40">
+      <button type="button" id="custom-topic-add-btn" class="btn-ghost" style="border-radius:8px;">Add</button>
+    </div>
+    <div id="custom-topic-chips" class="custom-topic-chips"></div>
+    <div class="question-count-row">
+      <label for="question-count">Number of questions</label>
+      <select id="question-count">
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="30">30</option>
+        <option value="40">40</option>
+        <option value="50">50</option>
+      </select>
+    </div>
     <div class="topic-picker-footer">
       <span id="topic-picker-status" class="topic-picker-status"></span>
       <button id="start-custom-btn" class="btn btn-primary">Start Practice <span class="icon-circle">→</span></button>
@@ -142,6 +159,7 @@
 </div>
 
 <script src="progress.js"></script>
+<script src="pwa.js"></script>
 <script>
   fetch('/api/days').then(r => r.json()).then(d => {
     const days = d.days || [];
@@ -193,6 +211,10 @@
             <span class="tmi-icon">🌐</span>
             <span><strong>Continue in browser</strong><small>Opens in a new tab</small></span>
           </button>
+          <button type="button" class="telegram-menu-item" id="telegram-deeplink-btn" role="menuitem">
+            <span class="tmi-icon">🔗</span>
+            <span><strong>Log in from Telegram</strong><small>Approve inside the bot chat, no popup</small></span>
+          </button>
           <a class="telegram-menu-item" href="https://t.me/Tiny_english_robot" target="_blank" rel="noopener" role="menuitem">
             <span class="tmi-icon">💬</span>
             <span><strong>Open Telegram app</strong><small>Chat with the bot directly — no web login</small></span>
@@ -220,9 +242,33 @@
       closeMenu();
       window.open('/api/auth/telegram/start', '_blank');
     });
+
+    // "Log in from Telegram" — the site's login button hands over a /start deep link; approving
+    // it inside the bot chat (or by typing /login there) claims the code, and this tab polls
+    // until that happens, then signs in exactly like the widget flow does.
+    document.getElementById('telegram-deeplink-btn').addEventListener('click', async () => {
+      closeMenu();
+      el.innerHTML = '<span class="streak-badge" style="opacity:.7;">Waiting for Telegram…</span>';
+      try {
+        const res = await fetch('/api/login/start', { method: 'POST' });
+        const data = await res.json();
+        if (!data.botLink) throw new Error('Could not start Telegram login.');
+        window.open(data.botLink, '_blank');
+        WM.pollLoginCode(data.code, (user) => {
+          if (user) {
+            WM.setTelegramUser(user);
+            renderTelegramCard();
+          } else {
+            renderTelegramCard(); // timed out — back to the normal login button
+          }
+        });
+      } catch (err) {
+        renderTelegramCard();
+      }
+    });
   }
   renderTelegramCard();
-
+  if (WM.getTelegramUser()) { WM.pullProgress().catch(() => {}); }
   // Picks up the result the moment telegram-callback.html reports back via postMessage —
   // works even though that tab closes itself, since the message fires just before it does.
   window.addEventListener('message', (event) => {
@@ -245,6 +291,39 @@
   ];
   const MAX_TOPICS = 10;
   let selectedTopics = [];
+  let customTopics = [];
+
+  function allSelectedTopics() {
+    return [...selectedTopics, ...customTopics].slice(0, MAX_TOPICS);
+  }
+
+  function renderCustomChips() {
+    const el = document.getElementById('custom-topic-chips');
+    el.innerHTML = customTopics.map((t, i) => `
+      <span class="custom-topic-chip">${t}<button type="button" data-i="${i}" aria-label="Remove ${t}">×</button></span>
+    `).join('');
+    el.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        customTopics.splice(parseInt(btn.dataset.i, 10), 1);
+        renderCustomChips();
+        updateTopicStatus();
+      });
+    });
+  }
+
+  document.getElementById('custom-topic-add-btn').addEventListener('click', () => {
+    const input = document.getElementById('custom-topic-input');
+    const val = input.value.trim();
+    if (!val) return;
+    if (allSelectedTopics().length >= MAX_TOPICS) { alert(`You can pick up to ${MAX_TOPICS} topics total.`); return; }
+    if (!customTopics.includes(val)) customTopics.push(val);
+    input.value = '';
+    renderCustomChips();
+    updateTopicStatus();
+  });
+  document.getElementById('custom-topic-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('custom-topic-add-btn').click(); }
+  });
 
   function renderTopicChecklist() {
     const el = document.getElementById('topic-checklist');
@@ -258,31 +337,35 @@
     el.querySelectorAll('input').forEach(cb => {
       cb.addEventListener('change', () => {
         selectedTopics = [...el.querySelectorAll('input:checked')].map(x => x.value);
-        if (selectedTopics.length > MAX_TOPICS) {
+        if (allSelectedTopics().length > MAX_TOPICS) {
           cb.checked = false;
-          selectedTopics = selectedTopics.slice(0, MAX_TOPICS);
+          selectedTopics = selectedTopics.slice(0, MAX_TOPICS - customTopics.length);
         }
         updateTopicStatus();
       });
     });
     document.getElementById('start-custom-btn').disabled = !available;
+    document.getElementById('custom-topic-add-btn').disabled = !available;
+    renderCustomChips();
     updateTopicStatus();
   }
 
   function updateTopicStatus() {
     const status = document.getElementById('topic-picker-status');
     status.textContent = WM.canDoCustomPracticeThisWeek()
-      ? `${selectedTopics.length} / ${MAX_TOPICS} topics selected`
+      ? `${allSelectedTopics().length} / ${MAX_TOPICS} topics selected`
       : "You've already used this week's set — come back next Monday.";
   }
 
   document.getElementById('start-custom-btn').addEventListener('click', async () => {
-    if (!selectedTopics.length) { alert('Select at least one topic.'); return; }
+    const topics = allSelectedTopics();
+    if (!topics.length) { alert('Select at least one topic (or add your own).'); return; }
     if (!WM.canDoCustomPracticeThisWeek()) { alert("You've already used this week's practice set."); return; }
+    const count = document.getElementById('question-count').value;
     const area = document.getElementById('custom-quiz-area');
     area.innerHTML = '<div class="loading-state">Building your set…</div>';
     try {
-      const res = await fetch('/api/practice/custom?topics=' + encodeURIComponent(selectedTopics.join(',')));
+      const res = await fetch('/api/practice/custom?topics=' + encodeURIComponent(topics.join(',')) + '&count=' + count);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       WM.markCustomPracticeDone();
