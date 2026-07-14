@@ -282,17 +282,50 @@ const WM = (function () {
   async function pollLoginCode(code, onDone, opts) {
     opts = opts || {};
     const intervalMs = opts.intervalMs || 2500;
-    const timeoutMs = opts.timeoutMs || 180000;
+    // Must comfortably outlast the worker's LOGIN_PENDING_TTL + LOGIN_VERIFIED_TTL (5 min + 5 min)
+    // — it used to be exactly 180000ms, same as the old pending TTL, so an approval near the
+    // edge of that window could get claimed right as (or after) the browser gave up polling.
+    const timeoutMs = opts.timeoutMs || 660000; // 11 minutes
     const start = Date.now();
-    async function tick() {
-      if (Date.now() - start > timeoutMs) { onDone(null); return; }
+    let stopped = false;
+    let timer = null;
+
+    async function check() {
       try {
         const res = await fetch('/api/login/status/' + encodeURIComponent(code));
         const data = await res.json();
-        if (data.claimed && data.user) { onDone(data.user); return; }
+        if (data.claimed && data.user) { finish(data.user); return true; }
       } catch {}
-      setTimeout(tick, intervalMs);
+      return false;
     }
+
+    function finish(user) {
+      if (stopped) return;
+      stopped = true;
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+      onDone(user);
+    }
+
+    async function tick() {
+      if (stopped) return;
+      if (Date.now() - start > timeoutMs) { finish(null); return; }
+      const done = await check();
+      if (!done) timer = setTimeout(tick, intervalMs);
+    }
+
+    // Background/inactive tabs get their timers throttled by the browser (sometimes heavily on
+    // mobile), which can delay noticing a claimed code until after it's expired. Re-check the
+    // instant the tab becomes visible/focused again instead of waiting for the next throttled tick.
+    function onVisible() {
+      if (stopped) return;
+      if (document.visibilityState && document.visibilityState !== 'visible') return;
+      check();
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+
     tick();
   }
 
