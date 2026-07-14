@@ -289,36 +289,6 @@
       return window.open(url, name, `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
     }
 
-    // Previously this tried tg://resolve directly in the visible popup, then peeked at
-    // popup.location.href after a timeout to decide whether to fall back to the t.me web link.
-    // That guess is unreliable: when no app catches the unregistered tg:// scheme, Chrome
-    // navigates the popup to its own "This site can't be reached" error page — and reading
-    // location off that error page throws (cross-origin-ish), which the old code treated as
-    // "an app handled it, nothing to do." Result: the popup got stuck showing the browser error
-    // instead of ever falling back.
-    //
-    // Fix: the visible popup goes straight to the real t.me web URL — Telegram's own page
-    // already detects an installed app and hands off to it, or falls back to Telegram Web,
-    // so it doesn't need our guesswork. The tg:// scheme is still attempted, but silently via
-    // a hidden iframe, so if it fails nothing is ever shown to the person.
-    function openTelegramDeepLink(startParam, popupName) {
-      const username = 'Tiny_english_robot';
-      const suffix = startParam ? `&start=${encodeURIComponent(startParam)}` : '';
-      const tgAppUrl = `tg://resolve?domain=${username}${suffix}`;
-      const webUrl = `https://t.me/${username}${startParam ? '?start=' + encodeURIComponent(startParam) : ''}`;
-
-      try {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = tgAppUrl;
-        document.body.appendChild(iframe);
-        setTimeout(() => iframe.remove(), 2000);
-      } catch { /* best-effort only, ignore failures */ }
-
-      const popup = openPopup(webUrl, popupName);
-      if (!popup) { window.location.href = webUrl; }
-    }
-
     btn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
     document.addEventListener('click', closeMenu);
 
@@ -328,22 +298,59 @@
     });
 
     // "Log in from Telegram" — the site's login button hands over a /start deep link (backed by
-    // a one-time KV token); tapping Start in the bot claims it, and this tab polls until that
-    // happens, then signs in exactly like the popup flow does.
+    // a one-time KV token). This used to try to auto-open Telegram via a JS-driven popup/redirect
+    // (window.open to t.me, or a hidden tg:// iframe) — but that guesswork breaks in ways outside
+    // our control: some networks block or throttle t.me's DNS, custom URL schemes behave
+    // differently across browsers/OSes, and a failed programmatic redirect can leave a stuck
+    // browser error page instead of falling back. A real, user-clicked <a> link is far more
+    // reliable — the browser/OS handles app handoff natively — so we just show one, plus the
+    // raw code as a manual backup in case Telegram itself is slow/unreachable from the browser.
+    // Either way, this tab keeps polling quietly in the background until the code is claimed.
     document.getElementById('telegram-deeplink-btn').addEventListener('click', async () => {
       closeMenu();
-      el.innerHTML = '<span class="streak-badge" style="opacity:.7;">Waiting for Telegram…</span>';
+      el.innerHTML = '<span class="streak-badge" style="opacity:.7;">Starting…</span>';
       try {
         const res = await fetch('/api/login/start', { method: 'POST' });
         const data = await res.json();
-        if (!data.botLink) throw new Error('Could not start Telegram login.');
-        openTelegramDeepLink(data.code, 'tg_login_deeplink');
+        if (!data.botLink || !data.code) throw new Error('Could not start Telegram login.');
+
+        el.innerHTML = `
+          <div class="telegram-login-wrap" style="text-align:left;">
+            <a href="${data.botLink}" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;justify-content:center;">
+              <svg class="tg-icon" viewBox="0 0 24 24" fill="none" width="16" height="16" aria-hidden="true"><path d="M3 11.5L20.5 4l-3 16-6-4.5-3 3-.5-5L20 6.5 6.5 13 3 11.5Z" fill="currentColor"/></svg>
+              Open Telegram to finish signing in
+            </a>
+            <p style="font-size:12.5px;color:var(--text-muted,#8a8a8a);margin:8px 0 4px;">
+              If Telegram doesn't open, open it yourself and send this to <strong>@Tiny_english_robot</strong>:
+            </p>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <code id="tg-manual-code" style="flex:1;padding:6px 8px;border:1px solid var(--border,#ddd);border-radius:6px;font-size:12.5px;overflow-wrap:anywhere;">/start ${data.code}</code>
+              <button type="button" id="tg-copy-code-btn" class="btn" style="padding:6px 10px;font-size:12px;">Copy</button>
+            </div>
+            <p id="tg-wait-status" style="font-size:12px;color:var(--text-muted,#8a8a8a);margin:8px 0 0;">Waiting for Telegram…</p>
+          </div>
+        `;
+
+        const copyBtn = document.getElementById('tg-copy-code-btn');
+        copyBtn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(`/start ${data.code}`);
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+          } catch {
+            // Clipboard API unavailable (e.g. non-HTTPS/older browser) — the code is already
+            // shown as selectable text, so the person can still select-and-copy it manually.
+          }
+        });
+
         WM.pollLoginCode(data.code, (user) => {
           if (user) {
             WM.setTelegramUser(user);
             renderTelegramCard();
           } else {
-            renderTelegramCard(); // timed out — back to the normal login button
+            const status = document.getElementById('tg-wait-status');
+            if (status) status.textContent = 'That link expired — try again.';
+            setTimeout(renderTelegramCard, 2000);
           }
         });
       } catch (err) {
