@@ -209,11 +209,11 @@
         <div class="telegram-menu" id="telegram-menu" role="menu">
           <button type="button" class="telegram-menu-item" id="telegram-browser-btn" role="menuitem">
             <span class="tmi-icon">🌐</span>
-            <span><strong>Continue in browser</strong><small>Opens in a new tab</small></span>
+            <span><strong>Continue in browser</strong><small>Opens in a small popup window</small></span>
           </button>
           <button type="button" class="telegram-menu-item" id="telegram-deeplink-btn" role="menuitem">
             <span class="tmi-icon">🔗</span>
-            <span><strong>Log in from Telegram</strong><small>Approve inside the bot chat, no popup</small></span>
+            <span><strong>Log in from Telegram</strong><small>Tap Start in the bot chat to sign in</small></span>
           </button>
           <a class="telegram-menu-item" href="https://t.me/Tiny_english_robot" target="_blank" rel="noopener" role="menuitem">
             <span class="tmi-icon">💬</span>
@@ -235,17 +235,27 @@
       btn.setAttribute('aria-expanded', String(open));
     }
 
+    // Opens a URL as a real small popup window (centered, fixed size) instead of a new tab —
+    // this is how Telegram's own login widget behaves, and it's what makes window.opener /
+    // postMessage back to this tab reliable.
+    function openPopup(url, name) {
+      const w = 550, h = 470;
+      const left = window.screenX + (window.outerWidth - w) / 2;
+      const top = window.screenY + (window.outerHeight - h) / 2;
+      window.open(url, name, `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+    }
+
     btn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
     document.addEventListener('click', closeMenu);
 
     document.getElementById('telegram-browser-btn').addEventListener('click', () => {
       closeMenu();
-      window.open('/api/auth/telegram/start', '_blank');
+      openPopup('/api/auth/telegram/start', 'tg_login_popup');
     });
 
-    // "Log in from Telegram" — the site's login button hands over a /start deep link; approving
-    // it inside the bot chat (or by typing /login there) claims the code, and this tab polls
-    // until that happens, then signs in exactly like the widget flow does.
+    // "Log in from Telegram" — the site's login button hands over a /start deep link (backed by
+    // a one-time KV token); tapping Start in the bot claims it, and this tab polls until that
+    // happens, then signs in exactly like the popup flow does.
     document.getElementById('telegram-deeplink-btn').addEventListener('click', async () => {
       closeMenu();
       el.innerHTML = '<span class="streak-badge" style="opacity:.7;">Waiting for Telegram…</span>';
@@ -253,7 +263,7 @@
         const res = await fetch('/api/login/start', { method: 'POST' });
         const data = await res.json();
         if (!data.botLink) throw new Error('Could not start Telegram login.');
-        window.open(data.botLink, '_blank');
+        openPopup(data.botLink, 'tg_login_deeplink');
         WM.pollLoginCode(data.code, (user) => {
           if (user) {
             WM.setTelegramUser(user);

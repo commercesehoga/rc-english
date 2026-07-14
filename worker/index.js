@@ -1,7 +1,7 @@
 // WonderMayank RC / Grammar / Vocabulary — Cloudflare Worker
 // Handles: daily question generation (Groq), D1 storage, archive lookup, weekly Sunday CBT test,
 // cross-device progress sync, Google-Sheet-backed weekly leaderboard, and the Telegram bot
-// (push notifications, quiz polls, inactivity nudges, /login deep-link sign-in).
+// (push notifications, quiz polls, inactivity nudges, Telegram deep-link sign-in).
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
@@ -117,7 +117,7 @@ async function handleApi(request, env, url) {
     }
 
     // "Log in from inside Telegram" — the site creates a code, the person approves it either
-    // via the bot's /login command or by opening the t.me?start= deep link, and the site polls
+    // via the t.me?start= deep link (tapping Start in the bot claims it), and the site polls
     // this status endpoint until it's claimed. No Telegram Login Widget popup needed.
     if (pathname === "/api/login/start" && request.method === "POST") {
       return json(await handleLoginStart(env), headers);
@@ -632,10 +632,14 @@ async function handleLeaderboardSubmit(env, request) {
 }
 
 // ---------- "log in from inside Telegram" (deep link, no widget popup) ----------
-// The site asks for a one-time code, shows a "Continue in Telegram" button pointing at
-// https://t.me/<bot>?start=<code>, and the person approves it inside their own chat with the
-// bot — no OAuth popup, no domain whitelisting quirks. The bot's own /login command creates
-// and self-claims a code the same way, for the reverse direction.
+// Tokens live in KV, not D1, specifically so they can self-expire with zero cleanup code:
+// a token that's never approved just falls out of KV after PENDING_TTL; one that's approved
+// but never picked up by the site falls out after VERIFIED_TTL. The moment the site's poll
+// successfully reads a verified token, it's deleted immediately — so a link can only ever
+// complete one login, never two.
+
+const LOGIN_PENDING_TTL = 180; // 3 minutes to open the bot and approve
+const LOGIN_VERIFIED_TTL = 120; // 2 more minutes for the site to notice and finish signing in
 
 function randomCode() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 12);
@@ -655,38 +659,43 @@ async function upsertUser(env, u) {
     .run();
 }
 
+// Called by the website: creates a pending token and hands back the t.me deep link to open it.
 async function handleLoginStart(env) {
   const code = randomCode();
-  await env.DB.prepare(`INSERT INTO login_requests (code) VALUES (?)`).bind(code).run();
+  await env.LOGIN_KV.put(code, JSON.stringify({ status: "pending" }), { expirationTtl: LOGIN_PENDING_TTL });
   const botUsername = env.TELEGRAM_BOT_USERNAME || BOT_USERNAME;
   return { code, botLink: `https://t.me/${botUsername}?start=${code}` };
 }
 
+// Called by the website's poll loop. Deletes the token the instant it's successfully read as
+// verified, so the same link can never be used for a second login.
 async function handleLoginStatus(env, code) {
-  const row = await env.DB.prepare(
-    `SELECT telegram_id, claimed_user, claimed_at, created_at FROM login_requests WHERE code = ?`
-  )
-    .bind(code)
-    .first();
-  if (!row) return { claimed: false, expired: true };
-
-  const ageMs = Date.now() - new Date(row.created_at.replace(" ", "T") + "Z").getTime();
-  if (!row.claimed_at && ageMs > 15 * 60 * 1000) return { claimed: false, expired: true };
-  if (!row.claimed_at) return { claimed: false };
-  return { claimed: true, user: JSON.parse(row.claimed_user) };
+  const raw = await env.LOGIN_KV.get(code);
+  if (!raw) return { claimed: false, expired: true };
+  const entry = JSON.parse(raw);
+  if (entry.status !== "verified") return { claimed: false };
+  await env.LOGIN_KV.delete(code);
+  return { claimed: true, user: entry.user };
 }
 
-// Called from the bot webhook once a code is approved (either via /start <code> or /login).
+// Called from the bot webhook once a code is approved via /start <code>.
 async function claimLoginCode(env, code, tgUser) {
-  const row = await env.DB.prepare(`SELECT claimed_at FROM login_requests WHERE code = ?`).bind(code).first();
-  if (!row || row.claimed_at) return false;
+  const raw = await env.LOGIN_KV.get(code);
+  if (!raw) return false;
+  const entry = JSON.parse(raw);
+  if (entry.status !== "pending") return false;
   await upsertUser(env, tgUser);
-  await env.DB.prepare(
-    `UPDATE login_requests SET telegram_id = ?, claimed_user = ?, claimed_at = datetime('now') WHERE code = ?`
-  )
-    .bind(tgUser.id, JSON.stringify(tgUser), code)
-    .run();
+  await env.LOGIN_KV.put(code, JSON.stringify({ status: "verified", user: tgUser }), { expirationTtl: LOGIN_VERIFIED_TTL });
   return true;
+}
+
+// Called from the bot webhook when someone types plain /start (no token) — self-issues an
+// already-verified token and a magic link, so opening it in any browser signs them straight in.
+async function issueSelfLoginLink(env, tgUser) {
+  const code = randomCode();
+  await upsertUser(env, tgUser);
+  await env.LOGIN_KV.put(code, JSON.stringify({ status: "verified", user: tgUser }), { expirationTtl: LOGIN_VERIFIED_TTL });
+  return `${SITE_URL}/telegram-callback.html?login_code=${code}`;
 }
 
 // ---------- Telegram sign-in + bot delivery ----------
@@ -931,7 +940,7 @@ async function handleTelegramWebhook(env, request) {
       const startPayloadMatch = text.match(/^\/start\s+(\S+)$/);
 
       if (startPayloadMatch) {
-        // Deep link from the website's "Continue in Telegram" login button: /start <code>
+        // Deep link from the website's "Log in from Telegram" button: /start <code>
         const code = startPayloadMatch[1];
         const tgUser = { id: chatId, username: msg.from.username, first_name: msg.from.first_name, photo_url: null };
         const claimed = await claimLoginCode(env, code, tgUser);
@@ -944,20 +953,24 @@ async function handleTelegramWebhook(env, request) {
             : `That login link has expired or was already used. Open the site again and tap "Log in with Telegram" for a fresh one.\n${SITE_URL}`
         );
       } else if (text === "/start") {
+        const tgUser = { id: chatId, username: msg.from.username, first_name: msg.from.first_name, photo_url: null };
         await env.DB.prepare(`UPDATE users SET opt_out_push = 0 WHERE telegram_id = ?`).bind(chatId).run();
+        // Typing /start directly in the bot is itself enough to sign in — no separate /login
+        // command needed. The link is single-use and expires in 2 minutes if not opened.
+        const magicLink = await issueSelfLoginLink(env, tgUser);
         await sendTelegramMessage(
           env,
           chatId,
           `👋 Welcome to <b>WonderMayank — RC / Grammar / Vocabulary</b>!\n\n` +
-            `Sign in with Telegram on the website (or just type /login here) and I'll push today's set every morning and send your weekly score card automatically.\n\n` +
-            `🔗 ${SITE_URL}\n\n` +
-            `Commands:\n/today — today's practice link\n/week — this week's test status\n/streak — your current & best streak\n/mistakes — saved mistakes waiting for review\n/login — get a one-tap sign-in link for the browser\n/stop — pause daily/weekly messages\n/help — show this again`
+            `🔗 Tap to sign in on the website (works once, expires in 2 minutes):\n${magicLink}\n\n` +
+            `I'll push today's set every morning and your weekly score card automatically once you're signed in.\n\n` +
+            `Commands:\n/today — today's practice link\n/week — this week's test status\n/streak — your current & best streak\n/mistakes — saved mistakes waiting for review\n/stop — pause daily/weekly messages\n/help — show this again`
         );
       } else if (text === "/help") {
         await sendTelegramMessage(
           env,
           chatId,
-          `Commands:\n/today — today's practice link\n/week — this week's test status\n/streak — your current & best streak\n/mistakes — saved mistakes waiting for review\n/login — get a one-tap sign-in link for the browser\n/stop — pause daily/weekly messages\n/start — welcome message`
+          `Commands:\n/today — today's practice link\n/week — this week's test status\n/streak — your current & best streak\n/mistakes — saved mistakes waiting for review\n/stop — pause daily/weekly messages\n/start — welcome message + a fresh sign-in link`
         );
       } else if (text === "/today") {
         await sendTelegramMessage(env, chatId, `📚 Today's Grammar, Vocabulary &amp; RC practice:\n${SITE_URL}/practice.html`);
@@ -985,20 +998,6 @@ async function handleTelegramWebhook(env, request) {
           n > 0
             ? `📝 You have <b>${n}</b> saved mistake(s) waiting for review.\n${SITE_URL}/mistakes.html`
             : `🎉 No open mistakes saved — you're all caught up!\n${SITE_URL}/mistakes.html`
-        );
-      } else if (text === "/login") {
-        const code = randomCode();
-        const tgUser = { id: chatId, username: msg.from.username, first_name: msg.from.first_name, photo_url: null };
-        await env.DB.prepare(
-          `INSERT INTO login_requests (code, telegram_id, claimed_user, claimed_at) VALUES (?, ?, ?, datetime('now'))`
-        )
-          .bind(code, chatId, JSON.stringify(tgUser))
-          .run();
-        await upsertUser(env, tgUser);
-        await sendTelegramMessage(
-          env,
-          chatId,
-          `🔗 Tap to open and sign in automatically — no password needed:\n${SITE_URL}/telegram-callback.html?login_code=${code}\n\n(Works once, expires in 15 minutes.)`
         );
       } else if (text === "/stop") {
         await env.DB.prepare(`UPDATE users SET opt_out_push = 1 WHERE telegram_id = ?`).bind(chatId).run();

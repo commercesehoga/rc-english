@@ -315,15 +315,41 @@ trigger needed:
 No extra secrets needed beyond the `TELEGRAM_BOT_TOKEN`/`TELEGRAM_WEBHOOK_SECRET` already set up
 in the previous round.
 
-### 9. New login type — sign in without leaving Telegram
+### 9. Telegram login — KV-backed one-time tokens, real popup, no widget quirks
 
-Two ways to sign in that never open the Telegram Login Widget popup:
+Two ways to sign in, both without the flaky Telegram Login Widget:
 
-- **From the bot**: type `/login` in the chat → the bot replies with a one-tap link
-  (`/telegram-callback.html?login_code=...`). Opening it in any browser signs you in immediately.
-- **From the website**: the "Log in with Telegram" button's new **"Log in from Telegram"** option
-  requests a code (`POST /api/login/start`), opens `https://t.me/Tiny_english_robot?start=<code>`
-  in a new tab, and polls `GET /api/login/status/:code` until you approve it inside that chat
-  (just opening `/start` there is enough — Telegram itself is the confirmation).
+- **"Continue in browser"** redirects straight to Telegram's real OAuth page
+  (`oauth.telegram.org/auth`), opened as a genuine small **popup window** (not a new tab) — this
+  is the same mechanism the official widget uses under the hood, just without embedding
+  `telegram-widget.js`. Requires `/setdomain` on @BotFather to be set to your exact deploy domain
+  (see the "Sign in with Telegram" setup notes above) — that's the #1 cause of this not working.
+- **"Log in from Telegram"** hands you a `t.me/<bot>?start=<token>` link; tapping **Start** inside
+  the bot signs you in immediately, and the site (polling in the background) picks it up within
+  a couple seconds. Typing plain `/start` *inside the bot itself* now does the same thing — the
+  bot replies with a one-tap sign-in link, no separate `/login` command needed.
 
-Both paths share the same `login_requests` table and a 15-minute code expiry; no new secrets.
+**Setup — create the KV namespace this relies on:**
+
+```bash
+npx wrangler kv namespace create LOGIN_KV
+```
+
+Paste the `id` it prints into `wrangler.toml` under `[[kv_namespaces]]` (replacing
+`PASTE_YOUR_KV_NAMESPACE_ID_HERE`), then deploy.
+
+**Why KV instead of D1 for this:** tokens are meant to be short-lived and single-use, and KV's
+native TTL does that cleanup for free — no cron, no manual delete queries.
+
+- A token starts **pending** for up to **3 minutes** (time to open the bot and tap Start). If
+  never approved, it just falls out of KV on its own.
+- Once approved, it flips to **verified** for up to **2 more minutes** (time for the site's poll
+  to notice). If the site never picks it up, it also falls out on its own.
+- The instant the site's poll successfully reads a verified token, the token is **deleted
+  immediately** — so the same link can never complete a second login.
+
+The old D1 `login_requests` table (created by `schema_v2.sql`) is no longer read from — it's
+harmless to leave in place, or drop it if you'd rather:
+```sql
+DROP TABLE IF EXISTS login_requests;
+```
