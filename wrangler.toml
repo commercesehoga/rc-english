@@ -20,7 +20,7 @@ database_id = "b11509f7-cd13-4d8f-839c-ec7302e01e56"
 # KV namespace for one-time "log in from Telegram" tokens. Create it with:
 #   npx wrangler kv namespace create LOGIN_KV
 # then paste the id it prints below. Tokens self-expire (native KV TTL) — pending ones after
-# 3 minutes, approved-but-not-yet-picked-up ones after 2 — so there's nothing to clean up.
+# 5 minutes, approved-but-not-yet-picked-up ones after another 5 — so there's nothing to clean up.
 [[kv_namespaces]]
 binding = "LOGIN_KV"
 id = "a5f9c5f4809d49eaad8ce830a9b2e92f"
