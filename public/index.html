@@ -289,35 +289,34 @@
       return window.open(url, name, `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
     }
 
-    // Some ISPs block/throttle t.me's DNS specifically, which shows a browser-level
-    // DNS_PROBE_FINISHED_NXDOMAIN error even though Telegram itself is reachable. The tg://
-    // custom URI scheme hands off straight to an installed Telegram app (desktop or mobile)
-    // without ever resolving t.me, so it's tried first; the t.me web link is only a fallback
-    // for when no Telegram app is installed to catch that scheme.
+    // Previously this tried tg://resolve directly in the visible popup, then peeked at
+    // popup.location.href after a timeout to decide whether to fall back to the t.me web link.
+    // That guess is unreliable: when no app catches the unregistered tg:// scheme, Chrome
+    // navigates the popup to its own "This site can't be reached" error page — and reading
+    // location off that error page throws (cross-origin-ish), which the old code treated as
+    // "an app handled it, nothing to do." Result: the popup got stuck showing the browser error
+    // instead of ever falling back.
+    //
+    // Fix: the visible popup goes straight to the real t.me web URL — Telegram's own page
+    // already detects an installed app and hands off to it, or falls back to Telegram Web,
+    // so it doesn't need our guesswork. The tg:// scheme is still attempted, but silently via
+    // a hidden iframe, so if it fails nothing is ever shown to the person.
     function openTelegramDeepLink(startParam, popupName) {
       const username = 'Tiny_english_robot';
       const suffix = startParam ? `&start=${encodeURIComponent(startParam)}` : '';
       const tgAppUrl = `tg://resolve?domain=${username}${suffix}`;
       const webUrl = `https://t.me/${username}${startParam ? '?start=' + encodeURIComponent(startParam) : ''}`;
 
-      const popup = openPopup('about:blank', popupName);
-      if (!popup) { window.location.href = webUrl; return; }
-      try { popup.location.href = tgAppUrl; } catch { /* ignore */ }
+      try {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = tgAppUrl;
+        document.body.appendChild(iframe);
+        setTimeout(() => iframe.remove(), 2000);
+      } catch { /* best-effort only, ignore failures */ }
 
-      setTimeout(() => {
-        try {
-          if (popup.closed) return;
-          // Browsers typically refuse to navigate away from about:blank for an unregistered
-          // custom scheme (rather than showing an error page) — if it's still sitting there,
-          // no Telegram app caught the tg:// link, so fall back to the normal web URL.
-          if (!popup.location.href || popup.location.href === 'about:blank') {
-            popup.location.href = webUrl;
-          }
-        } catch {
-          // Cross-origin read failure here actually means it DID navigate somewhere useful
-          // (an installed app took over, or it's now sitting on t.me) — nothing to do.
-        }
-      }, 1200);
+      const popup = openPopup(webUrl, popupName);
+      if (!popup) { window.location.href = webUrl; }
     }
 
     btn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
