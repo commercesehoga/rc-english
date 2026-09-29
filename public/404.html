@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('theme');
+    if(!t){ t = 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Page Not Found | AI by Wondermayank</title>
+<link rel="canonical" href="https://ai.thunderstudy.indevs.in/404"/>
+
+<meta name="description" content="The page you're looking for doesn't exist. Head back to AI by Wondermayank to browse all 10 free tools — typing, AI, study, finder, code, and more."/>
+<meta name="robots" content="noindex">
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta property="og:image" content="/og-image.png">
+<meta name="twitter:image" content="/og-image.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ai.thunderstudy.indevs.in/404">
+<meta property="og:title" content="Page Not Found | AI by Wondermayank">
+<meta property="og:description" content="The page you're looking for doesn't exist. Head back to AI by Wondermayank to browse all 10 free tools.">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+  --canvas:#F4F1FC;
+  --canvas-deep:#ECE6FB;
+  --surface:#FAF8FE;
+
+  --ink:#2B2640;
+  --body-c:#5C5575;
+  --muted:#8B84A0;
+
+  --hairline:rgba(43,38,64,.08);
+
+  --primary:#573AFC;
+  --primary-active:#4527E0;
+  --primary-soft:#E4DEFF;
+  --on-primary:#ffffff;
+
+  --clay-light:rgba(255,255,255,.9);
+  --clay-dark:rgba(120,108,180,.5);
+  --clay-dark-strong:rgba(120,108,180,.5);
+
+  --radius-card:28px;
+  --radius-sm:16px;
+  --radius-pill:999px;
+
+  --font:'Inter',system-ui,-apple-system,sans-serif;
+}
+
+[data-theme="dark"]{
+  --canvas:#1A1730;
+  --canvas-deep:#15122A;
+  --surface:#221D3C;
+
+  --ink:#F1EEFB;
+  --body-c:#C7C0E0;
+  --muted:#8E86AC;
+
+  --hairline:rgba(255,255,255,.08);
+
+  --primary:#9A7AFB;
+  --primary-active:#B196FB;
+  --primary-soft:#2E2650;
+  --on-primary:#1A1730;
+
+  --clay-light:rgba(255,255,255,.05);
+  --clay-dark:rgba(0,0,0,.55);
+  --clay-dark-strong:rgba(0,0,0,.7);
+}
+
+*{
+  box-sizing:border-box;
+}
+
+html,
+body{
+  margin:0;
+  padding:0;
+  min-height:100%;
+}
+
+body{
+  font-family:var(--font);
+  background:var(--canvas);
+  color:var(--body-c);
+  -webkit-font-smoothing:antialiased;
+  transition:background .3s ease,color .3s ease;
+  overflow-x:hidden;
+}
+
+a{
+  text-decoration:none;
+  color:inherit;
+}
+
+button{
+  font-family:var(--font);
+  border:none;
+  background:none;
+  cursor:pointer;
+}
+
+.wrap{
+  max-width:1240px;
+  margin:0 auto;
+  padding:0 32px;
+}
+
+@media(max-width:640px){
+  .wrap{
+    padding:0 20px;
+  }
+}
+
+/* =========================
+   LOADER
+========================= */
+
+#loader{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  background:var(--canvas);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  transition:opacity .4s ease,visibility .4s ease;
+}
+
+#loader.hide{
+  opacity:0;
+  visibility:hidden;
+}
+
+.loader-blob{
+  width:64px;
+  height:64px;
+  border-radius:28px;
+  background:var(--primary-soft);
+
+  box-shadow:
+    8px 8px 20px var(--clay-dark),
+    -8px -8px 20px var(--clay-light);
+
+  animation:pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes pulse{
+  0%,100%{
+    transform:scale(.85);
+  }
+
+  50%{
+    transform:scale(1.05);
+  }
+}
+
+/* =========================
+   NAV
+========================= */
+
+.nav{
+  position:sticky;
+  top:0;
+  z-index:50;
+
+  background:var(--canvas);
+  border-bottom:1px solid var(--hairline);
+
+  backdrop-filter:blur(16px) saturate(160%);
+}
+
+.nav .wrap{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  height:76px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  font-weight:700;
+  font-size:16px;
+  color:var(--ink);
+}
+
+.brand-mark{
+  width:36px;
+  height:36px;
+  border-radius:12px;
+
+  background:var(--primary);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  box-shadow:
+    4px 4px 10px var(--clay-dark),
+    -4px -4px 10px var(--clay-light);
+}
+
+.brand-mark img{
+  width:18px;
+  height:18px;
+}
+
+.nav-right{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.theme-btn{
+  width:40px;
+  height:40px;
+
+  border-radius:14px;
+  background:var(--surface);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  color:var(--ink);
+
+  box-shadow:
+    4px 4px 10px var(--clay-dark),
+    -4px -4px 10px var(--clay-light);
+
+  transition:transform .2s ease;
+}
+
+.theme-btn:hover{
+  transform:translateY(-2px);
+}
+
+.theme-btn svg{
+  width:18px;
+  height:18px;
+}
+
+.nav-cta{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  height:40px;
+  padding:0 18px;
+
+  border-radius:var(--radius-pill);
+
+  background:var(--primary);
+  color:var(--on-primary);
+
+  font-size:14px;
+  font-weight:600;
+
+  box-shadow:
+    4px 4px 10px var(--clay-dark),
+    -4px -4px 10px var(--clay-light);
+
+  transition:transform .2s ease,background .2s ease;
+}
+
+.nav-cta:hover{
+  background:var(--primary-active);
+  transform:translateY(-2px);
+}
+
+/* =========================
+   404 HERO
+========================= */
+
+.error-page{
+  min-height:calc(100vh - 76px);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  position:relative;
+  overflow:hidden;
+
+  padding:80px 0;
+}
+
+.blob{
+  position:absolute;
+  border-radius:50%;
+  filter:blur(2px);
+  opacity:.55;
+  z-index:0;
+  pointer-events:none;
+}
+
+.blob-1{
+  width:340px;
+  height:340px;
+
+  background:var(--primary-soft);
+
+  top:-100px;
+  left:-120px;
+}
+
+.blob-2{
+  width:260px;
+  height:260px;
+
+  background:#FFE3D2;
+
+  bottom:-90px;
+  right:-80px;
+}
+
+[data-theme="dark"] .blob{
+  opacity:.15;
+}
+
+.error-content{
+  position:relative;
+  z-index:2;
+
+  width:100%;
+  max-width:720px;
+
+  text-align:center;
+}
+
+/* =========================
+   404 NUMBER
+========================= */
+
+.error-number{
+  position:relative;
+
+  display:inline-block;
+
+  font-size:clamp(110px,20vw,220px);
+  line-height:.85;
+
+  font-weight:700;
+  letter-spacing:-12px;
+
+  color:var(--primary-soft);
+
+  text-shadow:
+    12px 12px 22px var(--clay-dark),
+    -12px -12px 22px var(--clay-light);
+
+  user-select:none;
+}
+
+.error-number span{
+  color:var(--primary);
+}
+
+/* =========================
+   ERROR CARD
+========================= */
+
+.error-card{
+  margin:30px auto 0;
+
+  max-width:620px;
+
+  padding:42px 34px;
+
+  background:var(--surface);
+
+  border-radius:var(--radius-card);
+
+  box-shadow:
+    10px 10px 24px var(--clay-dark),
+    -10px -10px 24px var(--clay-light);
+}
+
+.error-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+
+  padding:8px 16px;
+
+  border-radius:var(--radius-pill);
+
+  background:var(--primary-soft);
+  color:var(--primary);
+
+  font-size:12px;
+  font-weight:700;
+
+  letter-spacing:1.3px;
+  text-transform:uppercase;
+}
+
+.error-dot{
+  width:7px;
+  height:7px;
+
+  border-radius:50%;
+
+  background:var(--primary);
+}
+
+.error-card h1{
+  margin:20px 0 0;
+
+  color:var(--ink);
+
+  font-size:36px;
+  line-height:1.15;
+
+  letter-spacing:-.6px;
+}
+
+.error-card p{
+  max-width:500px;
+
+  margin:14px auto 0;
+
+  color:var(--body-c);
+
+  font-size:16px;
+  line-height:1.6;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+.error-actions{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:12px;
+
+  margin-top:30px;
+
+  flex-wrap:wrap;
+}
+
+.primary-btn,
+.secondary-btn{
+  min-height:46px;
+
+  padding:0 22px;
+
+  border-radius:var(--radius-pill);
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+
+  font-size:14px;
+  font-weight:700;
+
+  transition:
+    transform .2s ease,
+    box-shadow .2s ease,
+    background .2s ease;
+}
+
+.primary-btn{
+  background:var(--primary);
+  color:var(--on-primary);
+
+  box-shadow:
+    6px 6px 14px var(--clay-dark),
+    -6px -6px 14px var(--clay-light);
+}
+
+.primary-btn:hover{
+  background:var(--primary-active);
+  transform:translateY(-3px);
+}
+
+.secondary-btn{
+  background:var(--surface);
+  color:var(--ink);
+
+  box-shadow:
+    6px 6px 14px var(--clay-dark),
+    -6px -6px 14px var(--clay-light);
+}
+
+.secondary-btn:hover{
+  color:var(--primary);
+  transform:translateY(-3px);
+}
+
+.primary-btn svg,
+.secondary-btn svg{
+  width:17px;
+  height:17px;
+}
+
+/* =========================
+   HELPER TEXT
+========================= */
+
+.error-help{
+  margin-top:24px;
+
+  font-size:12.5px;
+  color:var(--muted);
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+footer{
+  background:var(--surface);
+  border-top:1px solid var(--hairline);
+  color:var(--muted);
+  padding-top:64px;
+}
+
+.footer-grid{
+  display:grid;
+  grid-template-columns:1.5fr 1fr 1fr 1fr;
+  gap:40px 48px;
+  padding-bottom:48px;
+}
+
+/* brand column */
+.footer-brand{
+  display:inline-flex;
+  align-items:center;
+  gap:12px;
+  color:var(--ink);
+}
+
+.footer-brand .brand-mark{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  box-shadow:none;
+}
+
+.footer-brand .brand-mark img{
+  width:22px;
+  height:22px;
+}
+
+.footer-brand-text{
+  display:flex;
+  flex-direction:column;
+  line-height:1.2;
+}
+
+.footer-brand-name{
+  color:var(--ink);
+  font-size:20px;
+  font-weight:700;
+}
+
+.footer-brand-by{
+  color:var(--muted);
+  font-size:13px;
+  font-weight:400;
+}
+
+.footer-desc{
+  margin:16px 0 0;
+  max-width:300px;
+
+  color:var(--muted);
+
+  font-size:14px;
+  font-weight:300;
+  line-height:1.55;
+}
+
+.footer-social{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  margin-top:24px;
+}
+
+.footer-social-label{
+  margin-bottom:6px;
+
+  color:var(--muted);
+
+  font-size:12px;
+  line-height:1.3;
+}
+
+.footer-social-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.social-btn{
+  width:44px;
+  height:44px;
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  border-radius:50%;
+  border:1px solid var(--hairline);
+
+  background:var(--canvas);
+  color:var(--ink);
+
+  transition:
+    transform .2s ease,
+    color .2s ease,
+    border-color .2s ease;
+}
+
+.social-btn:hover,
+.social-btn:focus-visible{
+  color:var(--primary);
+  border-color:var(--primary);
+  transform:translateY(-2px);
+}
+
+.social-btn:active{
+  transform:scale(.95);
+}
+
+.social-btn svg{
+  width:18px;
+  height:18px;
+}
+
+/* link columns */
+.footer-title{
+  margin:0 0 12px;
+
+  color:var(--ink);
+
+  font-size:18px;
+  font-weight:700;
+  line-height:1.4;
+}
+
+.footer-links{
+  list-style:none;
+  margin:0;
+  padding:0;
+}
+
+.footer-links a,
+.footer-legal a{
+  display:inline-flex;
+  align-items:center;
+
+  min-height:44px;
+
+  color:var(--body-c);
+
+  font-size:15px;
+  font-weight:400;
+  line-height:1.4;
+
+  transition:color .2s ease;
+}
+
+.footer-links a:hover,
+.footer-links a:focus-visible,
+.footer-legal a:hover,
+.footer-legal a:focus-visible{
+  color:var(--primary);
+}
+
+/* bottom bar */
+.footer-bottom{
+  border-top:1px solid var(--hairline-strong,var(--hairline));
+}
+
+.footer-bottom-inner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:8px 24px;
+
+  padding-top:14px;
+  padding-bottom:14px;
+}
+
+.footer-copy{
+  color:var(--muted);
+
+  font-size:14px;
+  line-height:1.43;
+  letter-spacing:-.1px;
+}
+
+.footer-legal{
+  display:flex;
+  flex-wrap:wrap;
+  gap:0 28px;
+}
+
+@media(max-width:900px){
+  .footer-grid{
+    grid-template-columns:repeat(3,1fr);
+  }
+
+  .footer-brand-col{
+    grid-column:1 / -1;
+  }
+}
+
+@media(max-width:640px){
+  footer{
+    padding-top:48px;
+  }
+
+  .footer-grid{
+    grid-template-columns:1fr;
+    gap:28px;
+    padding-bottom:32px;
+  }
+
+  .footer-bottom-inner{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+}
+
+@media(max-width:640px){
+
+  .nav .wrap{
+    height:68px;
+  }
+
+  .nav-cta{
+    padding:0 14px;
+  }
+
+  .error-page{
+    min-height:calc(100vh - 68px);
+    padding:55px 0;
+  }
+
+  .error-number{
+    font-size:115px;
+    letter-spacing:-7px;
+  }
+
+  .error-card{
+    padding:32px 22px;
+    margin-top:22px;
+  }
+
+  .error-card h1{
+    font-size:28px;
+  }
+
+  .error-card p{
+    font-size:15px;
+  }
+
+  .error-actions{
+    flex-direction:column;
+  }
+
+  .primary-btn,
+  .secondary-btn{
+    width:100%;
+  }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- LOADER -->
+<div id="loader" aria-hidden="true">
+  <div class="loader-blob"></div>
+</div>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="wrap">
+    <a href="https://ai.thunderstudy.indevs.in" class="brand">
+      <span class="brand-mark">
+        <img src="/favicon.svg" alt="AI by Wondermayank" width="32" height="32">
+      </span>
+      AI by Wondermayank
+    </a>
+
+    <div class="nav-right">
+      <!-- THEME -->
+      <button class="theme-btn" id="themeBtn" aria-label="Toggle dark mode">
+        <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4.2"/>
+          <path d="M12 2.5v2.4M12 19.1v2.4"/>
+          <path d="M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7"/>
+          <path d="M2.5 12h2.4M19.1 12h2.4"/>
+          <path d="M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/>
+        </svg>
+        <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="display:none">
+          <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/>
+        </svg>
+      </button>
+
+      <a href="https://thundertest.indevs.in" class="nav-cta">
+        Mock Test
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- 404 CONTENT -->
+<main class="error-page">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <div class="wrap">
+    <div class="error-content">
+      <div class="error-number">4<span>0</span>4</div>
+
+      <div class="error-card">
+        <div class="error-badge">
+          <span class="error-dot"></span>
+          AI by Wondermayank
+        </div>
+
+        <h1>This page wandered off</h1>
+
+        <p>The tool or page you're looking for doesn't exist, or it's moved. Try one of the 10 projects below, or head back home.</p>
+
+        <div class="error-actions">
+          <a href="https://ai.thunderstudy.indevs.in" class="primary-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 11.5 12 4l9 7.5"/>
+              <path d="M5.5 10v9h13v-9"/>
+              <path d="M9.5 19v-5h5v5"/>
+            </svg>
+            Back to home
+          </a>
+
+          <a href="https://thundertest.indevs.in" class="secondary-btn">
+            Mock Test
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"/>
+              <path d="m13 6 6 6-6 6"/>
+            </svg>
+          </a>
+        </div>
+
+        <div class="error-help">
+          Error 404 · Page Not Found
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-instagram" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></symbol>
+      <symbol id="i-youtube" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l11.733 16h4.267l-11.733 -16z"/><path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"/></symbol>
+      <symbol id="i-reddit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="14" rx="8" ry="5.5"/><circle cx="4.5" cy="11.5" r="1.6"/><circle cx="19.5" cy="11.5" r="1.6"/><path d="M12 8.5 13 4l4 1"/><circle cx="18" cy="5.2" r="1.2"/><path d="M9 13.5h.01M15 13.5h.01"/><path d="M9.5 16.5c1.4 1 3.6 1 5 0"/></symbol>
+      <symbol id="i-telegram" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="wrap">
+    <div class="footer-grid">
+
+      <div class="footer-brand-col">
+        <a href="https://ai.thunderstudy.indevs.in" class="footer-brand">
+          <span class="brand-mark">
+            <img src="/favicon.svg" alt="Thunder" width="22" height="22">
+          </span>
+          <span class="footer-brand-text">
+            <span class="footer-brand-name">AI</span>
+            <span class="footer-brand-by">by Wondermayank</span>
+          </span>
+        </a>
+
+        <p class="footer-desc">Free AI tools and exam-prep resources for Indian competitive exam students.</p>
+
+        <div class="footer-social">
+        <div>
+          <div class="footer-social-label">Wondermayank</div>
+          <div class="footer-social-row">
+            <a class="social-btn" href="https://www.instagram.com/wondermayank" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on Instagram" title="Instagram"><svg aria-hidden="true"><use href="#i-instagram"/></svg></a>
+            <a class="social-btn" href="https://www.youtube.com/@wondermayank" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on YouTube" title="YouTube"><svg aria-hidden="true"><use href="#i-youtube"/></svg></a>
+            <a class="social-btn" href="https://x.com/wondermayankx" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on X" title="X"><svg aria-hidden="true"><use href="#i-x"/></svg></a>
+            <a class="social-btn" href="https://www.reddit.com/user/wondermayankx" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on Reddit" title="Reddit"><svg aria-hidden="true"><use href="#i-reddit"/></svg></a>
+            <a class="social-btn" href="https://t.me/wondermayank" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on Telegram" title="Telegram"><svg aria-hidden="true"><use href="#i-telegram"/></svg></a>
+          </div>
+        </div>
+        <div>
+          <div class="footer-social-label">ThunderStudy</div>
+          <div class="footer-social-row">
+            <a class="social-btn" href="https://www.instagram.com/thunderstudyx" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on Instagram" title="Instagram"><svg aria-hidden="true"><use href="#i-instagram"/></svg></a>
+            <a class="social-btn" href="https://www.youtube.com/@thunderstudy_official" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on YouTube" title="YouTube"><svg aria-hidden="true"><use href="#i-youtube"/></svg></a>
+            <a class="social-btn" href="https://x.com/thunderstudyx" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on X" title="X"><svg aria-hidden="true"><use href="#i-x"/></svg></a>
+            <a class="social-btn" href="https://www.reddit.com/user/thunderstudyx" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on Reddit" title="Reddit"><svg aria-hidden="true"><use href="#i-reddit"/></svg></a>
+            <a class="social-btn" href="https://t.me/thunderstudy" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on Telegram" title="Telegram"><svg aria-hidden="true"><use href="#i-telegram"/></svg></a>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <nav aria-label="ThunderStudy">
+        <h2 class="footer-title">ThunderStudy</h2>
+        <ul class="footer-links">
+          <li><a href="https://thunderstudy.indevs.in">ThunderStudy</a></li>
+          <li><a href="https://thundertest.indevs.in">CBT Mock</a></li>
+          <li><a href="https://blog.thunderstudy.indevs.in">Blog</a></li>
+          <li><a href="https://thunderstudy.indevs.in/about">Help / Donate</a></li>
+        </ul>
+      </nav>
+
+      <nav aria-label="Support">
+        <h2 class="footer-title">Support</h2>
+        <ul class="footer-links">
+          <li><a href="https://wondermayank.in/fqa">FAQ</a></li>
+          <li><a href="https://wondermayank.in/mail">Mail</a></li>
+          <li><a href="https://wondermayank.in/contact">Contact</a></li>
+        </ul>
+      </nav>
+
+      <nav aria-label="wondermayank">
+        <h2 class="footer-title">wondermayank</h2>
+        <ul class="footer-links">
+          <li><a href="https://ai.thunderstudy.indevs.in">AI Tools</a></li>
+          <li><a href="https://project.wondermayank.in">Useful Projects</a></li>
+          <li><a href="https://wondermayank.in">Portfolio</a></li>
+          <li><a href="https://blog.wondermayank.indevs.in/">Blog</a></li>
+        </ul>
+      </nav>
+
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="wrap footer-bottom-inner">
+      <div class="footer-copy">© 2026 ThunderStudy by wondermayank. All rights reserved.</div>
+
+      <nav class="footer-legal" aria-label="Legal">
+        <a href="https://wondermayank.in/terms">Terms</a>
+        <a href="https://wondermayank.in/privacy">Privacy</a>
+        <a href="https://wondermayank.in/disclaimer">Disclaimer</a>
+        <a href="/sitemap">Sitemap</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* =========================
+   LOADER
+========================= */
+window.addEventListener('DOMContentLoaded',function(){
+  setTimeout(function(){
+    var loader=document.getElementById('loader');
+    if(loader){
+      loader.classList.add('hide');
+    }
+  },200);
+});
+
+setTimeout(function(){
+  var loader=document.getElementById('loader');
+  if(loader){
+    loader.classList.add('hide');
+  }
+},1500);
+
+/* =========================
+   THEME
+========================= */
+var themeBtn=document.getElementById('themeBtn');
+var sunIcon=document.getElementById('themeIconSun');
+var moonIcon=document.getElementById('themeIconMoon');
+
+function syncIcons(){
+  var theme=document.documentElement.getAttribute('data-theme');
+  sunIcon.style.display=theme === 'dark' ? 'none' : 'block';
+  moonIcon.style.display=theme === 'dark' ? 'block' : 'none';
+}
+
+syncIcons();
+themeBtn.addEventListener('click',function(){
+  var next=document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try{ localStorage.setItem('theme', next); }catch(e){}
+  syncIcons();
+});
+</script>
+
+</body>
+</html>
