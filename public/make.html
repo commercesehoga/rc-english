@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Make · Fill missing days</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --p1:#7C3AED; --p2:#A78BFA; --p3:#C4B5FD;
+  --b1:#60A5FA; --b2:#B9D9DC;
+  --ink:#2A2346; --muted:#6F6A8C;
+  --glass:rgba(255,255,255,.62); --glass-line:rgba(255,255,255,.85);
+  --shadow:0 10px 40px rgba(124,58,237,.13);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;color:var(--ink);
+  background:#fff;
+  background-image:
+    radial-gradient(620px 420px at 8% 4%, rgba(196,181,253,.55), transparent 70%),
+    radial-gradient(560px 420px at 96% 12%, rgba(96,165,250,.35), transparent 70%),
+    radial-gradient(640px 460px at 50% 104%, rgba(185,217,220,.65), transparent 70%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+  padding:max(24px,env(safe-area-inset-top)) 18px max(32px,env(safe-area-inset-bottom));
+}
+.wrap{max-width:860px;margin:0 auto}
+.glass{
+  background:var(--glass);border:1px solid var(--glass-line);border-radius:24px;
+  backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);
+  box-shadow:var(--shadow);
+}
+header{display:flex;align-items:center;gap:14px;margin:6px 4px 22px}
+.logo{width:46px;height:46px;flex:none}
+h1{font-size:24px;line-height:1.15;margin:0;font-weight:800;letter-spacing:-.02em}
+.sub{margin:3px 0 0;color:var(--muted);font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.stat{padding:18px 18px 16px;display:flex;flex-direction:column;gap:10px}
+.stat .ico{width:34px;height:34px}
+.stat .lbl{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.stat .val{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.stat .val small{font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:0}
+.panel{padding:22px;margin-bottom:16px}
+.actions{display:flex;flex-direction:column;align-items:center;gap:16px;padding:10px 0 6px}
+.make{
+  position:relative;overflow:hidden;border:0;color:#fff;font:800 20px Inter,sans-serif;letter-spacing:.01em;
+  padding:18px 64px;border-radius:999px;cursor:pointer;min-width:220px;
+  background:linear-gradient(135deg,var(--p1),var(--p2) 55%,var(--b1));
+  box-shadow:0 12px 30px rgba(124,58,237,.35),inset 0 1px 0 rgba(255,255,255,.4);
+  transition:transform .15s ease,box-shadow .15s ease,filter .15s;
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+}
+.make:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 16px 36px rgba(124,58,237,.42),inset 0 1px 0 rgba(255,255,255,.4)}
+.make:active:not(:disabled){transform:translateY(0)}
+.make:disabled{cursor:default;filter:saturate(.75)}
+.make.done{background:linear-gradient(135deg,var(--b1),var(--b2));color:#1E3A5F;box-shadow:0 10px 26px rgba(96,165,250,.3)}
+.make svg{width:22px;height:22px}
+.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.bar{width:100%;height:10px;border-radius:99px;background:rgba(196,181,253,.3);overflow:hidden;display:none}
+.bar.on{display:block}
+.bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--p1),var(--b1));transition:width .35s ease}
+.msg{font-size:14px;color:var(--muted);text-align:center;min-height:20px}
+.msg b{color:var(--ink)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.row h2{margin:0;font-size:16px;font-weight:700}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:4px;display:inline-block}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;max-height:340px;overflow-y:auto;padding:2px 4px 4px 2px}
+.chip{
+  border-radius:14px;padding:9px 6px;text-align:center;font-size:12px;font-weight:600;line-height:1.25;
+  border:1px solid transparent;transition:all .25s;
+}
+.chip small{display:block;font-size:10.5px;font-weight:500;opacity:.75}
+.chip.done{background:linear-gradient(135deg,rgba(96,165,250,.22),rgba(185,217,220,.5));color:#1E4E8C;border-color:rgba(96,165,250,.35)}
+.chip.missing{background:rgba(196,181,253,.22);color:#5B21B6;border:1px dashed var(--p2)}
+.chip.partial{background:linear-gradient(135deg,rgba(196,181,253,.4),rgba(96,165,250,.2));color:#5B21B6;border-color:var(--p2)}
+.chip.running{background:linear-gradient(135deg,var(--p1),var(--b1));color:#fff;box-shadow:0 6px 16px rgba(124,58,237,.35);transform:scale(1.05)}
+.chip.failed{background:#fff;color:#5B21B6;border:1.5px solid var(--p1)}
+.bg{color:var(--p1)}
+details{margin-top:6px}
+summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:600;list-style:none;display:inline-flex;align-items:center;gap:6px}
+summary::-webkit-details-marker{display:none}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px}
+input{
+  width:100%;font:500 14px Inter,sans-serif;color:var(--ink);padding:11px 13px;border-radius:12px;
+  border:1px solid rgba(167,139,250,.45);background:rgba(255,255,255,.75);outline:none;
+}
+input:focus{border-color:var(--p1);box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+.log{font:500 12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);max-height:150px;overflow:auto;white-space:pre-wrap}
+.log .ok{color:#2563EB}.log .err{color:#7C3AED;font-weight:700}
+a.back{color:var(--p1);text-decoration:none;font-weight:600;font-size:13px}
+@media(max-width:620px){
+  .stats{grid-template-columns:1fr}
+  .stat{flex-direction:row;align-items:center;gap:14px}
+  .stat>div{display:flex;flex-direction:column;gap:2px}
+  .opts{grid-template-columns:1fr}
+  .make{width:100%;padding:18px 24px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
+      <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C3AED"/><stop offset="1" stop-color="#60A5FA"/></linearGradient></defs>
+      <rect width="48" height="48" rx="14" fill="url(#lg)"/>
+      <path d="M14 30l6-14 4 9 3-5 7 10" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="35" cy="14" r="3" fill="#C4B5FD"/>
+    </svg>
+    <div>
+      <h1>Make missing days</h1>
+      <p class="sub">Compares the database with today and fills every gap. <a class="back" href="/">Back to site</a></p>
+    </div>
+  </header>
+
+  <section class="stats">
+    <div class="glass stat">
+      <svg class="ico" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="11" fill="#EDE9FE"/><rect x="8" y="10" width="18" height="15" rx="3.5" fill="#7C3AED"/><rect x="8" y="10" width="18" height="5" rx="2.5" fill="#A78BFA"/><circle cx="13" cy="19.5" r="1.6" fill="#fff"/><circle cx="17" cy="19.5" r="1.6" fill="#fff"/><circle cx="21" cy="19.5" r="1.6" fill="#fff"/></svg>
+      <div><span class="lbl">Today (IST)</span><span class="val" id="sToday">…</span></div>
+    </div>
+    <div class="glass stat">
+      <svg class="ico" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="11" fill="#DBEAFE"/><ellipse cx="17" cy="11.5" rx="8" ry="3.5" fill="#60A5FA"/><path d="M9 11.5v11c0 1.9 3.6 3.5 8 3.5s8-1.6 8-3.5v-11c0 1.9-3.6 3.5-8 3.5s-8-1.6-8-3.5z" fill="#3B82F6"/><path d="M9 17c0 1.9 3.6 3.5 8 3.5s8-1.6 8-3.5" fill="none" stroke="#DBEAFE" stroke-width="1.2"/></svg>
+      <div><span class="lbl">Latest in database</span><span class="val" id="sLast">…</span></div>
+    </div>
+    <div class="glass stat">
+      <svg class="ico" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="11" fill="#E0F2F1"/><circle cx="17" cy="17" r="9" fill="#B9D9DC"/><path d="M17 11.5V17l3.6 2.2" fill="none" stroke="#7C3AED" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div><span class="lbl">Days remaining</span><span class="val" id="sRemain">…</span></div>
+    </div>
+  </section>
+
+  <section class="glass panel">
+    <div class="actions">
+      <button class="make" id="makeBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" id="mIco"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>
+        <span id="mTxt">Loading</span>
+      </button>
+      <div class="bar" id="bar"><i id="barFill"></i></div>
+      <div class="msg" id="msg">Checking the database…</div>
+    </div>
+
+    <details>
+      <summary>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        Options
+      </summary>
+      <div class="opts">
+        <div><label for="from">Start from date (default: earliest day in database)</label><input type="date" id="from"></div>
+        <div><label for="key">Make key (only if you set MAKE_KEY)</label><input type="password" id="key" placeholder="optional" autocomplete="off"></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="glass panel">
+    <div class="row">
+      <h2>Days</h2>
+      <div class="legend">
+        <span><i class="dot" style="background:#93C5FD"></i>In database</span>
+        <span><i class="dot" style="background:#C4B5FD;border:1px dashed #7C3AED"></i>Missing</span>
+        <span><i class="dot" style="background:linear-gradient(135deg,#7C3AED,#60A5FA)"></i>Making</span>
+      </div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="glass panel">
+    <div class="row"><h2>Log</h2></div>
+    <div class="log" id="log">Nothing yet.</div>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const btn = $('makeBtn'), txt = $('mTxt'), msg = $('msg'), bar = $('bar'), fill = $('barFill');
+const ICON_MAKE = $('mIco').innerHTML;
+const ICON_SPIN = '<path d="M21 12a9 9 0 1 1-6.2-8.55"/>';
+const ICON_OK = '<path d="M20 6L9 17l-5-5"/>';
+let status = null, running = false;
+
+const fmt = (d) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+const fmtFull = (d) => d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : 'none yet';
+const dow = (d) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function log(text, cls) {
+  const el = $('log');
+  if (el.textContent === 'Nothing yet.') el.textContent = '';
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = text;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function setBtn(label, icon, opts = {}) {
+  txt.textContent = label;
+  $('mIco').innerHTML = icon;
+  $('mIco').classList.toggle('spin', !!opts.spin);
+  btn.disabled = !!opts.disabled;
+  btn.classList.toggle('done', !!opts.done);
+}
+
+function render() {
+  if (!status) return;
+  $('sToday').innerHTML = fmtFull(status.today);
+  $('sLast').innerHTML = status.last ? fmtFull(status.last) + '<br><small>' + status.totalDaysInDb + ' days stored</small>' : 'none yet';
+  const rem = status.days.filter((d) => d.state !== 'done').length;
+  $('sRemain').innerHTML = rem + ' <small>to make</small>';
+  if (!$('from').value) $('from').value = status.from;
+
+  const g = $('grid');
+  g.innerHTML = '';
+  for (const d of status.days) {
+    const c = document.createElement('div');
+    c.className = 'chip ' + d.state;
+    c.id = 'c-' + d.date;
+    c.innerHTML = fmt(d.date) + '<small>' + dow(d.date) + '</small>';
+    g.appendChild(c);
+  }
+  if (!running) {
+    if (rem === 0) {
+      setBtn('All caught up', ICON_OK, { disabled: true, done: true });
+      msg.innerHTML = 'The database already has every day up to <b>' + fmtFull(status.today) + '</b>.';
+    } else {
+      setBtn('Make', ICON_MAKE);
+      msg.innerHTML = '<b>' + rem + '</b> day' + (rem > 1 ? 's' : '') + ' missing between <b>' + fmt(status.from) + '</b> and <b>' + fmt(status.today) + '</b>. Press Make to fill them.';
+    }
+  }
+}
+
+async function load() {
+  try {
+    const from = $('from').value;
+    const r = await fetch('/api/make/status' + (from ? '?from=' + from : ''));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    status = await r.json();
+    render();
+  } catch (e) {
+    setBtn('Retry', ICON_MAKE);
+    msg.textContent = 'Could not read the database: ' + e.message;
+  }
+}
+
+async function make() {
+  const todo = status.days.filter((d) => d.state !== 'done');
+  if (!todo.length) return;
+  running = true;
+  bar.classList.add('on');
+  fill.style.width = '0%';
+  let done = 0, fails = 0, streak = 0;
+
+  for (const d of todo) {
+    const chip = $('c-' + d.date);
+    chip.className = 'chip running';
+    chip.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    setBtn('Making ' + (done + 1) + ' / ' + todo.length, ICON_SPIN, { disabled: true, spin: true });
+    msg.innerHTML = 'Generating <b>' + fmtFull(d.date) + '</b>…';
+    try {
+      const r = await fetch('/api/make/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Make-Key': $('key').value },
+        body: JSON.stringify({ date: d.date }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+      if (!j.ok) throw new Error('still missing: ' + j.missing.join(', '));
+      chip.className = 'chip done';
+      log('✓ ' + d.date + ' made', 'ok');
+      streak = 0;
+    } catch (e) {
+      fails++; streak++;
+      chip.className = 'chip failed';
+      log('✗ ' + d.date + ' — ' + e.message, 'err');
+      if (/make key/i.test(e.message) || streak >= 3) { log('Stopped. Fix the issue and press Make again.', 'err'); break; }
+    }
+    done++;
+    fill.style.width = Math.round((done / todo.length) * 100) + '%';
+    await sleep(1200); // stay friendly to Groq's per-minute limit
+  }
+
+  running = false;
+  bar.classList.remove('on');
+  await load();
+  if (fails) msg.innerHTML = '<b>' + fails + '</b> failed. Press Make to retry the remaining days.';
+}
+
+btn.addEventListener('click', () => { if (!running && status) make(); });
+$('from').addEventListener('change', () => { if (!running) load(); });
+$('key').value = localStorage.getItem('makeKey') || '';
+$('key').addEventListener('input', () => localStorage.setItem('makeKey', $('key').value));
+load();
+</script>
+</body>
+</html>

@@ -179,8 +179,23 @@ same way you've routed your other tools.
   matching up to 10 chosen topics — no new schema needed, it reuses `topic_tag` on
   `daily_content`. Gated to once per Mon–Sun week via `localStorage`, same as streaks.
 
+## Filling missing days (/make.html)
+
+If the site was idle for a while (cron failed, quota ran out, etc.), open `/make.html`. It compares
+the dates stored in D1 with today's IST date, shows every gap, and the **Make** button generates
+the missing days one by one (grammar, vocabulary and RC per day) with live progress. Days that
+fail stay marked, and pressing Make again retries only those. Use the Options section to choose a
+different start date.
+
+Optional protection: `npx wrangler secret put MAKE_KEY`. Once set, the page asks for that key
+(Options → Make key) before it can generate anything. Without it, anyone who knows the URL can
+trigger generation, so setting it is recommended.
+
 ## Notes / limits worth knowing
 
+- **AI model**: daily generation uses `openai/gpt-oss-120b` on Groq, with automatic fallback to
+  `openai/gpt-oss-20b`, `llama-3.3-70b-versatile`, then `llama-3.1-8b-instant`. Change the order
+  in the `GROQ_MODELS` array at the top of `worker/index.js`.
 - **Groq free tier**: 30 requests/min, ~1,000 requests/day per model, no card required. This app
   makes at most 3 Groq calls a day (one per category), so it stays nowhere near the limit even if
   you also use Groq elsewhere.

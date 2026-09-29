@@ -3,7 +3,14 @@
 // cross-device progress sync, Google-Sheet-backed weekly leaderboard, and the Telegram bot
 // (push notifications, quiz polls, inactivity nudges, Telegram deep-link sign-in).
 
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+// Groq models, tried in order. If one fails (rate limit, deprecation, bad JSON), the next is used.
+// Primary is OpenAI GPT OSS 120B; the rest are fallbacks so daily generation never breaks.
+const GROQ_MODELS = [
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-20b",
+  "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant",
+];
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
 // Used inside the Telegram bot's replies (/start, /today, /week) and push notifications.
@@ -51,6 +58,19 @@ async function handleApi(request, env, url) {
 
     if (pathname === "/api/today" && request.method === "GET") {
       return json(await getOrGenerateToday(env), headers);
+    }
+
+    if (pathname === "/api/make/status" && request.method === "GET") {
+      return json(await getMakeStatus(env, url.searchParams.get("from")), headers);
+    }
+
+    if (pathname === "/api/make/run" && request.method === "POST") {
+      // Optional protection: if you set a MAKE_KEY secret, the /make.html page must send it.
+      if (env.MAKE_KEY && request.headers.get("X-Make-Key") !== env.MAKE_KEY) {
+        return json({ error: "Wrong or missing make key" }, headers, 401);
+      }
+      const body = await request.json().catch(() => ({}));
+      return json(await runMakeForDate(env, body.date), headers);
     }
 
     if (pathname === "/api/days" && request.method === "GET") {
@@ -202,33 +222,69 @@ function getWeekBounds(dateStr) {
 
 // ---------- Groq generation ----------
 
-async function callGroq(env, systemPrompt, userPrompt) {
+function isValidQuestions(data) {
+  if (!data || !Array.isArray(data.questions) || data.questions.length < 1) return false;
+  return data.questions.every(
+    (q) =>
+      q &&
+      typeof q.question === "string" &&
+      q.options &&
+      ["a", "b", "c", "d"].every((k) => typeof q.options[k] === "string") &&
+      ["a", "b", "c", "d"].includes(q.correct)
+  );
+}
+
+async function callGroqModel(env, model, systemPrompt, userPrompt) {
+  const body = {
+    model,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    temperature: 0.85,
+    response_format: { type: "json_object" },
+  };
+  if (model.startsWith("openai/gpt-oss")) {
+    // GPT OSS are reasoning models: keep reasoning short and leave room for the JSON answer.
+    body.reasoning_effort = "low";
+    body.max_completion_tokens = 8192;
+  } else {
+    body.max_completion_tokens = 4096;
+  }
+
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${env.GROQ_API_KEY}`,
     },
-    body: JSON.stringify({
-      model: GROQ_MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.85,
-      response_format: { type: "json_object" },
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Groq error ${res.status}: ${errText.slice(0, 300)}`);
+    throw new Error(`Groq ${model} error ${res.status}: ${errText.slice(0, 300)}`);
   }
 
   const data = await res.json();
   let raw = data.choices?.[0]?.message?.content || "{}";
   raw = raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "");
-  return JSON.parse(raw);
+  const parsed = JSON.parse(raw);
+  if (!isValidQuestions(parsed)) throw new Error(`Groq ${model} returned an invalid question set`);
+  return parsed;
+}
+
+async function callGroq(env, systemPrompt, userPrompt) {
+  let lastErr;
+  for (const model of GROQ_MODELS) {
+    try {
+      return await callGroqModel(env, model, systemPrompt, userPrompt);
+    } catch (err) {
+      lastErr = err;
+      console.warn(`Groq model failed, trying next: ${err.message}`);
+    }
+  }
+  throw lastErr || new Error("All Groq models failed");
 }
 
 const JSON_SHAPE = `Return strict JSON only, no markdown, no commentary, in exactly this shape:
@@ -318,6 +374,67 @@ async function generateDailyContent(env, dateStr) {
     const data = await callGroq(env, system, user);
     await insertCategory(env, date, "rc", data.passage, data.questions);
   }
+}
+
+// ---------- /make.html backfill helpers ----------
+
+const ALL_CATEGORIES = ["grammar", "vocabulary", "rc"];
+
+// Compares what's in D1 against every calendar day from `from` (default: the earliest day in D1)
+// up to today (IST), and reports which days are complete, partial, or missing entirely.
+async function getMakeStatus(env, fromParam) {
+  const today = getISTDateString();
+  const rows = await env.DB.prepare(
+    `SELECT date, GROUP_CONCAT(DISTINCT category) AS cats, COUNT(*) AS n
+     FROM daily_content GROUP BY date ORDER BY date`
+  ).all();
+  const byDate = {};
+  for (const r of rows.results || []) {
+    byDate[r.date] = { categories: (r.cats || "").split(","), questions: r.n };
+  }
+  const dates = Object.keys(byDate).sort();
+  const first = dates[0] || null;
+  const last = dates[dates.length - 1] || null;
+
+  let from = /^\d{4}-\d{2}-\d{2}$/.test(fromParam || "") ? fromParam : first || today;
+  if (from > today) from = today;
+
+  const days = [];
+  let cursor = from;
+  for (let i = 0; i < 800 && cursor <= today; i++) {
+    const have = byDate[cursor]?.categories || [];
+    const missing = ALL_CATEGORIES.filter((c) => !have.includes(c));
+    days.push({
+      date: cursor,
+      state: missing.length === 0 ? "done" : have.length === 0 ? "missing" : "partial",
+      missing,
+    });
+    cursor = addDaysStr(cursor, 1);
+  }
+
+  return {
+    today,
+    first,
+    last,
+    from,
+    totalDaysInDb: dates.length,
+    remaining: days.filter((d) => d.state !== "done").length,
+    days,
+  };
+}
+
+// Generates whatever is missing for ONE date. The page calls this once per date so each request
+// stays well inside Worker time and subrequest limits.
+async function runMakeForDate(env, date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || "")) throw new Error("Invalid date");
+  if (date > getISTDateString()) throw new Error("Cannot generate a future date");
+  await generateDailyContent(env, date);
+  const r = await env.DB.prepare(`SELECT DISTINCT category FROM daily_content WHERE date = ?`)
+    .bind(date)
+    .all();
+  const have = (r.results || []).map((x) => x.category);
+  const missing = ALL_CATEGORIES.filter((c) => !have.includes(c));
+  return { date, ok: missing.length === 0, missing };
 }
 
 // ---------- reads ----------
