@@ -194,8 +194,10 @@ trigger generation, so setting it is recommended.
 ## Notes / limits worth knowing
 
 - **AI model**: daily generation uses `openai/gpt-oss-120b` on Groq, with automatic fallback to
-  `openai/gpt-oss-20b`, `llama-3.3-70b-versatile`, then `llama-3.1-8b-instant`. Change the order
-  in the `GROQ_MODELS` array at the top of `worker/index.js`.
+  `openai/gpt-oss-20b`, then `llama-3.3-70b-versatile`. Open `/api/make/models` to see which models
+  your Groq key can actually use, then override the list with a `GROQ_MODELS` variable
+  (comma-separated, e.g. `GROQ_MODELS = "openai/gpt-oss-20b,llama-3.3-70b-versatile"`) in
+  `wrangler.toml` under `[vars]`, or in the Cloudflare dashboard.
 - **Groq free tier**: 30 requests/min, ~1,000 requests/day per model, no card required. This app
   makes at most 3 Groq calls a day (one per category), so it stays nowhere near the limit even if
   you also use Groq elsewhere.

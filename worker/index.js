@@ -3,14 +3,19 @@
 // cross-device progress sync, Google-Sheet-backed weekly leaderboard, and the Telegram bot
 // (push notifications, quiz polls, inactivity nudges, Telegram deep-link sign-in).
 
-// Groq models, tried in order. If one fails (rate limit, deprecation, bad JSON), the next is used.
-// Primary is OpenAI GPT OSS 120B; the rest are fallbacks so daily generation never breaks.
-const GROQ_MODELS = [
+// Groq models, tried in order. If one fails (no access, rate limit, bad JSON), the next is used.
+// To change the list without editing code, set a GROQ_MODELS variable (comma-separated) in
+// wrangler.toml [vars] or the Cloudflare dashboard.
+const DEFAULT_GROQ_MODELS = [
   "openai/gpt-oss-120b",
   "openai/gpt-oss-20b",
   "llama-3.3-70b-versatile",
-  "llama-3.1-8b-instant",
 ];
+
+function getGroqModels(env) {
+  const custom = (env.GROQ_MODELS || "").split(",").map((m) => m.trim()).filter(Boolean);
+  return custom.length ? custom : DEFAULT_GROQ_MODELS;
+}
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
 // Used inside the Telegram bot's replies (/start, /today, /week) and push notifications.
@@ -62,6 +67,20 @@ async function handleApi(request, env, url) {
 
     if (pathname === "/api/make/status" && request.method === "GET") {
       return json(await getMakeStatus(env, url.searchParams.get("from")), headers);
+    }
+
+    if (pathname === "/api/make/models" && request.method === "GET") {
+      // Lists the models your Groq key can actually use, and which of them this app is set to try.
+      const r = await fetch("https://api.groq.com/openai/v1/models", {
+        headers: { Authorization: `Bearer ${env.GROQ_API_KEY}` },
+      });
+      const data = await r.json().catch(() => ({}));
+      const available = (data.data || []).map((m) => m.id).sort();
+      const configured = getGroqModels(env);
+      return json(
+        { configured, usable: configured.filter((m) => available.includes(m)), available, groqStatus: r.status },
+        headers
+      );
     }
 
     if (pathname === "/api/make/run" && request.method === "POST") {
@@ -275,16 +294,17 @@ async function callGroqModel(env, model, systemPrompt, userPrompt) {
 }
 
 async function callGroq(env, systemPrompt, userPrompt) {
-  let lastErr;
-  for (const model of GROQ_MODELS) {
+  const errors = [];
+  for (const model of getGroqModels(env)) {
     try {
       return await callGroqModel(env, model, systemPrompt, userPrompt);
     } catch (err) {
-      lastErr = err;
+      errors.push(err.message);
       console.warn(`Groq model failed, trying next: ${err.message}`);
     }
   }
-  throw lastErr || new Error("All Groq models failed");
+  // Report every model's failure, not just the last one, so the real cause is visible.
+  throw new Error(`All Groq models failed. ${errors.join(" | ")}`);
 }
 
 const JSON_SHAPE = `Return strict JSON only, no markdown, no commentary, in exactly this shape:
