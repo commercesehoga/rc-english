@@ -1,166 +1,1363 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('theme');
+    if(!t){ t = 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WonderMayank — Master RC, Grammar & Vocabulary</title>
-<meta name="description" content="Free daily Reading Comprehension, Grammar and Vocabulary practice for competitive exam aspirants, plus a weekly CBT test every Sunday.">
 
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="alternate icon" href="favicon.svg">
-<link rel="apple-touch-icon" href="favicon.svg">
+<title>English RC by Wondermayank — Master RC, Grammar &amp; Vocabulary</title>
+<meta name="description" content="Free daily Reading Comprehension, Grammar and Vocabulary practice for SSC, CUET and Banking aspirants, plus a weekly CBT test every Sunday.">
+<meta name="author" content="Wondermayank">
+<meta name="theme-color" content="#573AFC">
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="alternate icon" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/favicon.svg">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#B87E38">
 
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="WonderMayank">
+<meta property="og:site_name" content="English RC by Wondermayank">
+<meta property="og:locale" content="en_IN">
 <meta property="og:url" content="https://english.thunderstudy.indevs.in/">
-<meta property="og:title" content="WonderMayank — Master RC, Grammar & Vocabulary">
-<meta property="og:description" content="Free daily Reading Comprehension, Grammar and Vocabulary practice for competitive exam aspirants, plus a weekly CBT test every Sunday.">
+<meta property="og:title" content="English RC by Wondermayank — Master RC, Grammar &amp; Vocabulary">
+<meta property="og:description" content="Free daily Reading Comprehension, Grammar and Vocabulary practice for SSC, CUET and Banking aspirants, plus a weekly CBT test every Sunday.">
 <meta property="og:image" content="https://english.thunderstudy.indevs.in/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="WonderMayank — Master RC, Grammar & Vocabulary">
-<meta name="twitter:description" content="Free daily Reading Comprehension, Grammar and Vocabulary practice for competitive exam aspirants, plus a weekly CBT test every Sunday.">
+<meta name="twitter:title" content="English RC by Wondermayank — Master RC, Grammar &amp; Vocabulary">
+<meta name="twitter:description" content="Free daily Reading Comprehension, Grammar and Vocabulary practice for SSC, CUET and Banking aspirants, plus a weekly CBT test every Sunday.">
 <meta name="twitter:image" content="https://english.thunderstudy.indevs.in/og-image.png">
 
-<link rel="stylesheet" href="style.css">
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"EducationalOrganization",
+  "name":"English RC by Wondermayank",
+  "url":"https://english.thunderstudy.indevs.in/",
+  "description":"Free daily Reading Comprehension, Grammar and Vocabulary practice for competitive exam aspirants, plus a weekly CBT test every Sunday.",
+  "parentOrganization":{"@type":"Organization","name":"ThunderStudy","url":"https://thunderstudy.indevs.in"}
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --canvas:#F4F1FC;
+  --canvas-deep:#ECE6FB;
+  --surface:#FAF8FE;
+
+  --ink:#2B2640;
+  --body-c:#5C5575;
+  --muted:#8B84A0;
+
+  --hairline:rgba(43,38,64,.08);
+
+  --primary:#573AFC;
+  --primary-active:#4527E0;
+  --primary-soft:#E4DEFF;
+  --on-primary:#ffffff;
+
+  --clay-light:rgba(255,255,255,.9);
+  --clay-dark:rgba(120,108,180,.5);
+  --clay-dark-strong:rgba(120,108,180,.5);
+
+  --radius-card:28px;
+  --radius-sm:16px;
+  --radius-pill:999px;
+
+  --font:'Inter',system-ui,-apple-system,sans-serif;
+}
+
+[data-theme="dark"]{
+  --canvas:#1A1730;
+  --canvas-deep:#15122A;
+  --surface:#221D3C;
+
+  --ink:#F1EEFB;
+  --body-c:#C7C0E0;
+  --muted:#8E86AC;
+
+  --hairline:rgba(255,255,255,.08);
+
+  --primary:#9A7AFB;
+  --primary-active:#B196FB;
+  --primary-soft:#2E2650;
+  --on-primary:#1A1730;
+
+  --clay-light:rgba(255,255,255,.05);
+  --clay-dark:rgba(0,0,0,.55);
+  --clay-dark-strong:rgba(0,0,0,.7);
+}
+
+*{
+  box-sizing:border-box;
+}
+
+html,
+body{
+  margin:0;
+  padding:0;
+  min-height:100%;
+}
+
+body{
+  font-family:var(--font);
+  background:var(--canvas);
+  color:var(--body-c);
+  -webkit-font-smoothing:antialiased;
+  transition:background .3s ease,color .3s ease;
+  overflow-x:hidden;
+}
+
+a{
+  text-decoration:none;
+  color:inherit;
+}
+
+button{
+  font-family:var(--font);
+  border:none;
+  background:none;
+  cursor:pointer;
+}
+
+.wrap{
+  max-width:1240px;
+  margin:0 auto;
+  padding:0 32px;
+}
+
+@media(max-width:640px){
+  .wrap{
+    padding:0 20px;
+  }
+}
+
+/* =========================
+   LOADER
+========================= */
+
+#loader{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  background:var(--canvas);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  transition:opacity .4s ease,visibility .4s ease;
+}
+
+#loader.hide{
+  opacity:0;
+  visibility:hidden;
+}
+
+.loader-blob{
+  width:64px;
+  height:64px;
+  border-radius:28px;
+  background:var(--primary-soft);
+
+  box-shadow:
+    8px 8px 20px var(--clay-dark),
+    -8px -8px 20px var(--clay-light);
+
+  animation:pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes pulse{
+  0%,100%{
+    transform:scale(.85);
+  }
+
+  50%{
+    transform:scale(1.05);
+  }
+}
+
+/* =========================
+   NAV
+========================= */
+
+.nav{
+  position:sticky;
+  top:0;
+  z-index:50;
+
+  background:var(--canvas);
+  border-bottom:1px solid var(--hairline);
+
+  backdrop-filter:blur(16px) saturate(160%);
+}
+
+.nav .wrap{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  height:76px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  font-weight:700;
+  font-size:16px;
+  color:var(--ink);
+}
+
+.brand-text{
+  display:flex;
+  flex-direction:column;
+  line-height:1.15;
+}
+
+.brand-name{
+  color:var(--ink);            /* "Thunder": white in dark mode, dark ink in light mode */
+  font-size:17px;
+  font-weight:700;
+  letter-spacing:-.2px;
+}
+
+.brand-accent{
+  color:var(--primary);        /* "Study": blue in light mode, purple in dark mode */
+}
+
+.brand-by{
+  color:var(--muted);
+  font-size:11.5px;
+  font-weight:400;
+  letter-spacing:.1px;
+}
+
+.brand-mark{
+  width:36px;
+  height:36px;
+  border-radius:12px;
+
+  background:var(--primary);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  box-shadow:
+    4px 4px 10px var(--clay-dark),
+    -4px -4px 10px var(--clay-light);
+}
+
+.brand-mark img{
+  width:18px;
+  height:18px;
+}
+
+.nav-right{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.theme-btn{
+  width:40px;
+  height:40px;
+
+  border-radius:14px;
+  background:var(--surface);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  color:var(--ink);
+
+  box-shadow:
+    4px 4px 10px var(--clay-dark),
+    -4px -4px 10px var(--clay-light);
+
+  transition:transform .2s ease;
+}
+
+.theme-btn:hover{
+  transform:translateY(-2px);
+}
+
+.theme-btn svg{
+  width:18px;
+  height:18px;
+}
+
+.nav-cta{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  height:40px;
+  padding:0 18px;
+
+  border-radius:var(--radius-pill);
+
+  background:var(--primary);
+  color:var(--on-primary);
+
+  font-size:14px;
+  font-weight:600;
+
+  box-shadow:
+    4px 4px 10px var(--clay-dark),
+    -4px -4px 10px var(--clay-light);
+
+  transition:transform .2s ease,background .2s ease;
+}
+
+.nav-cta:hover{
+  background:var(--primary-active);
+  transform:translateY(-2px);
+}
+
+.nav-request{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+
+  height:40px;
+  padding:0 16px;
+
+  border-radius:var(--radius-pill);
+
+  background:var(--surface);
+  color:var(--ink);
+
+  font-size:14px;
+  font-weight:600;
+  white-space:nowrap;
+
+  box-shadow:
+    4px 4px 10px var(--clay-dark),
+    -4px -4px 10px var(--clay-light);
+
+  transition:transform .2s ease,color .2s ease;
+}
+
+.nav-request:hover{
+  color:var(--primary);
+  transform:translateY(-2px);
+}
+
+.nav-request svg{
+  width:17px;
+  height:17px;
+  flex-shrink:0;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+.primary-btn,
+.secondary-btn{
+  min-height:46px;
+
+  padding:0 22px;
+
+  border-radius:var(--radius-pill);
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+
+  font-size:14px;
+  font-weight:700;
+
+  transition:
+    transform .2s ease,
+    box-shadow .2s ease,
+    background .2s ease;
+}
+
+.primary-btn{
+  background:var(--primary);
+  color:var(--on-primary);
+
+  box-shadow:
+    6px 6px 14px var(--clay-dark),
+    -6px -6px 14px var(--clay-light);
+}
+
+.primary-btn:hover{
+  background:var(--primary-active);
+  transform:translateY(-3px);
+}
+
+.secondary-btn{
+  background:var(--surface);
+  color:var(--ink);
+
+  box-shadow:
+    6px 6px 14px var(--clay-dark),
+    -6px -6px 14px var(--clay-light);
+}
+
+.secondary-btn:hover{
+  color:var(--primary);
+  transform:translateY(-3px);
+}
+
+.primary-btn svg,
+.secondary-btn svg{
+  width:17px;
+  height:17px;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+footer{
+  background:var(--surface);
+  border-top:1px solid var(--hairline);
+  color:var(--muted);
+  padding-top:64px;
+}
+
+.footer-grid{
+  display:grid;
+  grid-template-columns:1.5fr 1fr 1fr 1fr;
+  gap:40px 48px;
+  padding-bottom:48px;
+}
+
+/* brand column */
+.footer-brand{
+  display:inline-flex;
+  align-items:center;
+  gap:12px;
+  color:var(--ink);
+}
+
+.footer-brand .brand-mark{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  box-shadow:none;
+}
+
+.footer-brand .brand-mark img{
+  width:22px;
+  height:22px;
+}
+
+.footer-brand-text{
+  display:flex;
+  flex-direction:column;
+  line-height:1.2;
+}
+
+.footer-brand-name{
+  color:var(--ink);
+  font-size:20px;
+  font-weight:700;
+}
+
+.footer-brand-by{
+  color:var(--muted);
+  font-size:13px;
+  font-weight:400;
+}
+
+.footer-desc{
+  margin:16px 0 0;
+  max-width:300px;
+
+  color:var(--muted);
+
+  font-size:14px;
+  font-weight:300;
+  line-height:1.55;
+}
+
+.footer-social{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  margin-top:24px;
+}
+
+.footer-social-label{
+  margin-bottom:6px;
+
+  color:var(--muted);
+
+  font-size:12px;
+  line-height:1.3;
+}
+
+.footer-social-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.social-btn{
+  width:44px;
+  height:44px;
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  border-radius:50%;
+  border:1px solid var(--hairline);
+
+  background:var(--canvas);
+  color:var(--ink);
+
+  transition:
+    transform .2s ease,
+    color .2s ease,
+    border-color .2s ease;
+}
+
+.social-btn:hover,
+.social-btn:focus-visible{
+  color:var(--primary);
+  border-color:var(--primary);
+  transform:translateY(-2px);
+}
+
+.social-btn:active{
+  transform:scale(.95);
+}
+
+.social-btn svg{
+  width:18px;
+  height:18px;
+}
+
+/* link columns */
+.footer-title{
+  margin:0 0 12px;
+
+  color:var(--ink);
+
+  font-size:18px;
+  font-weight:700;
+  line-height:1.4;
+}
+
+.footer-links{
+  list-style:none;
+  margin:0;
+  padding:0;
+}
+
+.footer-links a,
+.footer-legal a{
+  display:inline-flex;
+  align-items:center;
+
+  min-height:44px;
+
+  color:var(--body-c);
+
+  font-size:15px;
+  font-weight:400;
+  line-height:1.4;
+
+  transition:color .2s ease;
+}
+
+.footer-links a:hover,
+.footer-links a:focus-visible,
+.footer-legal a:hover,
+.footer-legal a:focus-visible{
+  color:var(--primary);
+}
+
+/* bottom bar */
+.footer-bottom{
+  border-top:1px solid var(--hairline-strong,var(--hairline));
+}
+
+.footer-bottom-inner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:8px 24px;
+
+  padding-top:14px;
+  padding-bottom:14px;
+}
+
+.footer-copy{
+  color:var(--muted);
+
+  font-size:14px;
+  line-height:1.43;
+  letter-spacing:-.1px;
+}
+
+.footer-legal{
+  display:flex;
+  flex-wrap:wrap;
+  gap:0 28px;
+}
+
+@media(max-width:900px){
+  .footer-grid{
+    grid-template-columns:repeat(3,1fr);
+  }
+
+  .footer-brand-col{
+    grid-column:1 / -1;
+  }
+}
+
+@media(max-width:640px){
+  footer{
+    padding-top:48px;
+  }
+
+  .footer-grid{
+    grid-template-columns:1fr;
+    gap:28px;
+    padding-bottom:32px;
+  }
+
+  .footer-bottom-inner{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+}
+/* =========================
+   PAGE EXTRAS (semantic + scheme)
+========================= */
+:root{
+  color-scheme:light;
+  --success:#22c55e;
+  --error:#dc2626;
+  --on-semantic:#ffffff;
+}
+[data-theme="dark"]{
+  color-scheme:dark;
+}
+h1,h2,h3{color:var(--ink);margin:0;}
+p{margin:0;}
+.clay{box-shadow:10px 10px 24px var(--clay-dark),-10px -10px 24px var(--clay-light);}
+.clay-sm{box-shadow:6px 6px 16px var(--clay-dark),-6px -6px 16px var(--clay-light);}
+.clay-press{transition:transform .15s ease,box-shadow .15s ease;}
+.clay-press:active{transform:scale(.96);box-shadow:inset 5px 5px 12px var(--clay-dark),inset -5px -5px 12px var(--clay-light);}
+svg{flex-shrink:0;}
+
+/* =========================
+   HEADER EXTRAS (in-page nav, hamburger, mobile menu)
+========================= */
+.nav-links{display:flex;align-items:center;gap:20px;}
+.nav-links a{font-size:13.5px;font-weight:600;color:var(--body-c);white-space:nowrap;transition:color .2s ease;}
+.brand,.brand-name{white-space:nowrap;}
+.brand-text{min-width:0;}
+.nav-links a:hover,.nav-links a:focus-visible,.nav-links a.active{color:var(--primary);}
+.hamburger{display:none;width:40px;height:40px;border-radius:14px;background:var(--surface);align-items:center;justify-content:center;color:var(--ink);box-shadow:4px 4px 10px var(--clay-dark),-4px -4px 10px var(--clay-light);transition:transform .2s ease;}
+.hamburger:hover{transform:translateY(-2px);}
+.hamburger svg{width:18px;height:18px;}
+.mobile-menu{display:none;flex-direction:column;padding:16px 20px 24px;background:var(--canvas);border-bottom:1px solid var(--hairline);}
+.mobile-menu.open{display:flex;}
+.mobile-menu a{padding:14px 0;font-size:15px;font-weight:600;color:var(--ink);border-bottom:1px solid var(--hairline);}
+.mobile-menu a:hover,.mobile-menu a.active{color:var(--primary);}
+.mobile-menu .streak-badge{align-self:flex-start;margin-top:16px;}
+
+@media(max-width:1279px){
+  .nav-links{display:none;}
+  .hamburger{display:flex;}
+}
+@media(min-width:1280px){
+  .mobile-menu{display:none !important;}
+}
+@media(max-width:640px){
+  .nav-right .streak-badge{display:none;}
+  .telegram-card .telegram-login-btn{width:40px;padding:0;border-radius:14px;font-size:0;gap:0;}
+  .telegram-card .telegram-login-btn .tg-chevron{display:none;}
+  .telegram-card .telegram-login-btn .tg-icon{width:18px;height:18px;}
+  .hamburger,.telegram-card .telegram-login-btn{flex:none;}
+}
+@media(max-width:420px){
+  .brand-by{display:none;}
+}
+@media(max-width:400px){
+  .hamburger{width:36px;height:36px;}
+}
+
+/* streak */
+.streak-badge{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 13px;border-radius:var(--radius-pill);background:var(--surface);color:var(--ink);font-size:13px;font-weight:700;white-space:nowrap;box-shadow:4px 4px 10px var(--clay-dark),-4px -4px 10px var(--clay-light);}
+.streak-badge:empty{display:none;}
+.streak-badge svg{width:16px;height:16px;color:var(--accent,var(--primary));}
+
+/* telegram login (CTA slot) */
+.telegram-card{position:relative;display:flex;align-items:center;}
+.telegram-login-wrap{position:relative;}
+.telegram-login-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 18px;border-radius:var(--radius-pill);background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:600;white-space:nowrap;box-shadow:4px 4px 10px var(--clay-dark),-4px -4px 10px var(--clay-light);transition:transform .2s ease,background .2s ease;}
+.telegram-login-btn:hover{background:var(--primary-active);transform:translateY(-2px);}
+.tg-icon{width:17px;height:17px;}
+.tg-long{display:none;}
+.tg-chevron{width:12px;height:12px;transition:transform .2s ease;}
+.telegram-login-btn[aria-expanded="true"] .tg-chevron{transform:rotate(180deg);}
+.telegram-menu{display:none;position:absolute;right:0;top:calc(100% + 14px);width:312px;padding:10px;background:var(--surface);border:1px solid var(--hairline);border-radius:20px;box-shadow:10px 10px 24px var(--clay-dark),-10px -10px 24px var(--clay-light);z-index:70;}
+.telegram-menu.open{display:block;}
+.telegram-menu-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:14px;text-align:left;color:var(--ink);transition:background .2s ease;}
+.telegram-menu-item:hover,.telegram-menu-item:focus-visible{background:var(--primary-soft);}
+.telegram-menu-item strong{display:block;color:var(--ink);font-size:14px;font-weight:700;}
+.telegram-menu-item small{display:block;margin-top:2px;color:var(--muted);font-size:12px;font-weight:400;line-height:1.4;}
+.tmi-icon{width:38px;height:38px;border-radius:12px;background:var(--tint);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none;}
+.tmi-icon svg{width:18px;height:18px;}
+.telegram-signed-in{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 6px 0 6px;border-radius:var(--radius-pill);background:var(--surface);box-shadow:4px 4px 10px var(--clay-dark),-4px -4px 10px var(--clay-light);}
+.telegram-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;}
+.telegram-name{margin-left:6px;color:var(--ink);font-size:14px;font-weight:600;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.telegram-logout-btn{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:color .2s ease,background .2s ease;}
+.telegram-logout-btn:hover{color:var(--primary);background:var(--primary-soft);}
+.telegram-logout-btn svg{width:14px;height:14px;}
+.tg-panel{position:absolute;right:0;top:calc(100% + 14px);width:min(330px,86vw);padding:18px;text-align:left;background:var(--surface);border:1px solid var(--hairline);border-radius:20px;box-shadow:10px 10px 24px var(--clay-dark),-10px -10px 24px var(--clay-light);z-index:70;}
+.tg-panel .primary-btn{width:100%;}
+.tg-note{margin:12px 0 8px;color:var(--muted);font-size:12.5px;line-height:1.5;}
+.tg-note strong{color:var(--ink);font-weight:600;}
+.tg-code-row{display:flex;gap:8px;align-items:center;}
+.tg-code{flex:1;padding:8px 12px;border:1px solid var(--hairline);border-radius:var(--radius-sm);background:var(--canvas);color:var(--body-c);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;overflow-wrap:anywhere;}
+.btn-sm{min-height:36px;padding:0 14px;font-size:12.5px;}
+.tg-status{margin-top:10px;color:var(--muted);font-size:12px;}
+
+/* =========================
+   HERO
+========================= */
+.hero{position:relative;overflow:hidden;padding:96px 0 64px;}
+.hero .wrap{position:relative;z-index:1;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;}
+.blob{position:absolute;border-radius:50%;filter:blur(2px);opacity:.55;z-index:0;pointer-events:none;}
+.blob-1{width:340px;height:340px;background:var(--primary-soft);top:-100px;left:-120px;}
+.blob-2{width:260px;height:260px;background:#FFE3D2;bottom:-90px;right:-80px;}
+[data-theme="dark"] .blob{opacity:.15;}
+.eyebrow{position:relative;z-index:1;display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:var(--radius-pill);background:var(--surface);color:var(--primary);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;box-shadow:4px 4px 10px var(--clay-dark),-4px -4px 10px var(--clay-light);}
+.eyebrow svg{width:15px;height:15px;}
+.hero-title{margin-top:24px;font-size:52px;line-height:1.1;font-weight:700;letter-spacing:-.5px;}
+.accent{color:var(--primary);}
+.hero-sub{margin-top:20px;max-width:540px;font-size:18px;line-height:1.5;color:var(--body-c);}
+.hero-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:32px;}
+.hero-features{display:grid;grid-template-columns:repeat(3,auto);justify-content:start;gap:18px 32px;margin-top:40px;}
+.hero-feature{display:flex;align-items:center;gap:12px;}
+.hero-feature strong{display:block;color:var(--ink);font-size:14.5px;font-weight:700;}
+.hero-feature div span{display:block;margin-top:2px;color:var(--muted);font-size:12.5px;}
+.icon-tile{width:44px;height:44px;border-radius:14px;background:var(--tint);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);}
+.icon-tile svg{width:22px;height:22px;}
+.hero-visual{display:flex;justify-content:center;}
+.hero-art{width:100%;max-width:460px;padding:18px;background:var(--surface);border-radius:var(--radius-card);box-shadow:10px 10px 24px var(--clay-dark),-10px -10px 24px var(--clay-light);}
+.hero-art img{display:block;width:100%;height:auto;border-radius:20px;}
+
+/* =========================
+   SECTIONS
+========================= */
+.section{padding:88px 0;}
+.section.parchment{background:var(--canvas-deep);}
+.section-head{max-width:600px;margin:0 auto 48px;text-align:center;}
+.section-eyebrow{display:block;color:var(--primary);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
+.section-title{margin-top:12px;font-size:34px;line-height:1.2;font-weight:700;letter-spacing:-.3px;}
+.section-desc{margin-top:12px;font-size:16px;line-height:1.55;color:var(--body-c);}
+
+/* stats */
+.stats-section{padding:8px 0 88px;}
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;padding:26px 30px;background:var(--surface);border-radius:var(--radius-card);box-shadow:10px 10px 24px var(--clay-dark),-10px -10px 24px var(--clay-light);}
+.stat{display:flex;align-items:center;gap:14px;}
+.stat-num{color:var(--ink);font-size:24px;font-weight:700;line-height:1.1;}
+.stat-label{margin-top:4px;color:var(--muted);font-size:13px;}
+
+/* topic cards */
+.tool-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;}
+.tool-card{display:block;background:var(--surface);border-radius:var(--radius-card);padding:30px 26px;box-shadow:8px 8px 20px var(--clay-dark),-8px -8px 20px var(--clay-light);transition:transform .2s ease,box-shadow .2s ease;}
+.tool-card:hover,.tool-card:focus-visible{transform:translateY(-6px);box-shadow:10px 14px 26px var(--clay-dark-strong),-8px -8px 20px var(--clay-light);}
+.tool-icon{width:56px;height:56px;border-radius:18px;background:var(--tint);color:var(--accent);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);}
+.tool-icon svg{width:26px;height:26px;}
+.topic-tag{display:inline-flex;margin-top:20px;padding:4px 12px;border-radius:var(--radius-pill);background:var(--tint);color:var(--accent);font-size:11.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;}
+.tool-card h3{margin-top:12px;font-size:18px;font-weight:700;}
+.tool-card p{margin-top:8px;font-size:14.5px;line-height:1.5;color:var(--body-c);}
+.tool-link{display:inline-flex;align-items:center;gap:6px;margin-top:18px;color:var(--accent);font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;}
+.tool-link svg{width:14px;height:14px;}
+
+/* topic picker card */
+.card{background:var(--surface);border-radius:var(--radius-card);padding:36px 34px;box-shadow:10px 10px 24px var(--clay-dark),-10px -10px 24px var(--clay-light);}
+.topic-checklist{display:flex;flex-wrap:wrap;gap:10px;}
+.topic-check{position:relative;display:inline-flex;cursor:pointer;}
+.topic-check input{position:absolute;opacity:0;width:0;height:0;}
+.topic-check span{display:inline-flex;align-items:center;min-height:38px;padding:0 16px;border-radius:var(--radius-pill);background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:600;box-shadow:4px 4px 10px var(--clay-dark),-4px -4px 10px var(--clay-light);transition:transform .2s ease,background .2s ease,color .2s ease;}
+.topic-check:hover span{transform:translateY(-2px);color:var(--primary);}
+.topic-check input:checked + span{background:var(--primary);color:var(--on-primary);}
+.topic-check input:checked:hover + span{background:var(--primary-active);color:var(--on-primary);}
+.topic-check input:focus-visible + span{outline:2px solid var(--primary);outline-offset:3px;}
+.topic-check input:disabled + span{opacity:.5;cursor:not-allowed;transform:none;}
+.custom-topic-add{display:flex;gap:12px;margin-top:28px;}
+.custom-topic-add input{flex:1;min-width:0;}
+.custom-topic-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+.custom-topic-chips:empty{display:none;}
+.custom-topic-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 8px 6px 14px;border-radius:var(--radius-pill);background:var(--primary-soft);color:var(--primary);font-size:13px;font-weight:700;}
+.custom-topic-chip button{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:var(--primary);transition:background .2s ease;}
+.custom-topic-chip button:hover{background:var(--surface);}
+.custom-topic-chip button svg{width:12px;height:12px;}
+.question-count-row{display:flex;align-items:center;gap:14px;margin-top:24px;}
+.question-count-row label{color:var(--ink);font-size:14px;font-weight:600;}
+.topic-picker-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-top:28px;padding-top:22px;border-top:1px solid var(--hairline);}
+.topic-picker-status{color:var(--muted);font-size:13.5px;}
+
+input[type="text"],select{height:46px;padding:0 16px;border:1px solid var(--hairline);border-radius:var(--radius-sm);background:var(--canvas);color:var(--ink);font-family:var(--font);font-size:14.5px;outline:none;transition:border-color .2s ease,box-shadow .2s ease;}
+input[type="text"]::placeholder{color:var(--muted);}
+input[type="text"]:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);}
+select{padding-right:12px;cursor:pointer;}
+.primary-btn:disabled,.secondary-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.primary-btn:disabled:hover{background:var(--primary);transform:none;}
+.secondary-btn:disabled:hover{color:var(--ink);transform:none;}
+
+/* quiz */
+#custom-quiz-area{display:grid;gap:24px;margin-top:32px;}
+#custom-quiz-area:empty{display:none;}
+.q-card{background:var(--surface);border-radius:var(--radius-card);padding:30px 28px;box-shadow:8px 8px 20px var(--clay-dark),-8px -8px 20px var(--clay-light);}
+.passage-box{margin-bottom:20px;padding:18px 20px;border:1px solid var(--hairline);border-radius:var(--radius-sm);background:var(--canvas);}
+.passage-box h3{margin-bottom:8px;color:var(--primary);font-size:12px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;}
+.passage-box p{font-size:15px;line-height:1.65;color:var(--body-c);}
+.q-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.q-chip{padding:5px 12px;border-radius:var(--radius-pill);background:var(--primary-soft);color:var(--primary);font-size:12px;font-weight:700;letter-spacing:.4px;}
+.q-text{margin-bottom:16px;color:var(--ink);font-size:17px;font-weight:600;line-height:1.5;}
+.option-row{display:grid;gap:12px;}
+.option{display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font-size:14.5px;line-height:1.45;text-align:left;box-shadow:4px 4px 10px var(--clay-dark),-4px -4px 10px var(--clay-light);transition:transform .2s ease,color .2s ease,box-shadow .2s ease,background .2s ease;}
+.option:hover{transform:translateY(-2px);color:var(--primary);}
+.option .letter{width:30px;height:30px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:inline-flex;align-items:center;justify-content:center;flex:none;font-size:13px;font-weight:700;}
+.q-card[data-answered] .option{cursor:default;}
+.q-card[data-answered] .option:not(.correct):not(.wrong){opacity:.6;transform:none;color:var(--ink);}
+.option.correct,.option.correct:hover{transform:none;color:var(--ink);box-shadow:inset 0 0 0 2px var(--success);}
+.option.correct .letter{background:var(--success);color:var(--on-semantic);}
+.option.wrong,.option.wrong:hover{transform:none;color:var(--ink);box-shadow:inset 0 0 0 2px var(--error);}
+.option.wrong .letter{background:var(--error);color:var(--on-semantic);}
+.explanation{display:none;margin-top:16px;padding:14px 18px;border-radius:var(--radius-sm);background:var(--primary-soft);color:var(--ink);font-size:14.5px;line-height:1.6;}
+.explanation.show{display:block;}
+.explanation:empty{display:none !important;}
+.loading-state,.empty-state{margin-top:32px;padding:28px;border-radius:var(--radius-card);background:var(--surface);color:var(--body-c);font-size:15px;font-weight:600;text-align:center;box-shadow:6px 6px 16px var(--clay-dark),-6px -6px 16px var(--clay-light);}
+
+/* feature strip */
+.feature-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;}
+.feature-item{display:flex;align-items:center;gap:14px;}
+.feature-item strong{display:block;color:var(--ink);font-size:15px;font-weight:700;}
+.feature-item span.sub{display:block;margin-top:2px;color:var(--muted);font-size:13px;}
+
+/* =========================
+   RESPONSIVE (page)
+========================= */
+@media(max-width:1024px){
+  .tool-grid,.feature-strip{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:900px){
+  .hero .wrap{grid-template-columns:1fr;gap:40px;}
+  .hero-visual{order:-1;}
+  .stats-bar{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:640px){
+  .hero{padding:72px 0 44px;}
+  .hero-title{font-size:32px;}
+  .hero-sub{font-size:16px;}
+  .hero-features{grid-template-columns:1fr;}
+  .hero-actions{flex-direction:column;align-items:stretch;}
+  .hero-actions .primary-btn,.hero-actions .secondary-btn{width:100%;}
+  .section{padding:64px 0;}
+  .stats-section{padding:0 0 64px;}
+  .section-title{font-size:26px;}
+  .stats-bar{padding:22px 20px;gap:20px;}
+  .tool-grid,.feature-strip{grid-template-columns:1fr;}
+  .card{padding:26px 20px;}
+  .custom-topic-add{flex-direction:column;}
+  .custom-topic-add .secondary-btn{width:100%;}
+  .question-count-row{flex-direction:column;align-items:flex-start;}
+  .topic-picker-footer{flex-direction:column;align-items:stretch;}
+  .topic-picker-footer .primary-btn{width:100%;}
+  .q-card{padding:24px 18px;}
+  .telegram-menu{width:min(312px,86vw);}
+}
+@media(max-width:400px){
+  .telegram-card .telegram-login-btn{width:36px;height:36px;padding:0;}
+  .streak-badge{height:36px;}
+}
+@media(prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important;}
+}
+
+/* =========================
+   NAV RESPONSIVE (identical to 404)
+========================= */
+@media(max-width:640px){
+  .nav .wrap{ height:68px; }
+  .nav-cta,.telegram-login-btn{ padding:0 14px; }
+  .nav-right{ gap:8px; }
+  .nav-request{ width:40px; padding:0; border-radius:14px; }
+  .nav-request-text{ display:none; }
+  .primary-btn,.secondary-btn{ }
+}
+@media(max-width:400px){
+  .nav .wrap{ padding:0 14px; }
+  .nav-right{ gap:6px; }
+  .theme-btn,.nav-request{ width:36px; height:36px; }
+  .nav-cta{ height:36px; padding:0 12px; font-size:13px; }
+}
+
+</style>
 </head>
+
 <body>
 
-<nav class="navbar">
-  <a href="index.html" class="brand">
-    <img src="https://wondermayank.github.io/favicon.svg" alt="" class="brand-mark">
-    Wonder<span class="accent">Mayank</span>
-  </a>
-  <div class="nav-links">
+<!-- ICON SPRITE (line icons, replaces all emoji) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="u-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+    <symbol id="u-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m11 3 1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/><path d="m18.5 15 .9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"/></symbol>
+    <symbol id="u-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/></symbol>
+    <symbol id="u-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></symbol>
+    <symbol id="u-library" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="u-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+    <symbol id="u-gift" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></symbol>
+    <symbol id="u-book-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+    <symbol id="u-type" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></symbol>
+    <symbol id="u-book-a" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/><path d="m8 13 4-7 4 7"/><path d="M9.1 11h5.8"/></symbol>
+    <symbol id="u-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0z"/></symbol>
+    <symbol id="u-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+    <symbol id="u-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
+    <symbol id="u-timer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4"/><path d="m12 14 3-3"/><circle cx="12" cy="14" r="8"/></symbol>
+    <symbol id="u-flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+    <symbol id="u-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+    <symbol id="u-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+    <symbol id="u-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="u-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></symbol>
+    <symbol id="u-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+    <symbol id="u-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="u-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="u-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  </defs>
+</svg>
+
+<!-- LOADER -->
+<div id="loader" aria-hidden="true">
+  <div class="loader-blob"></div>
+</div>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="wrap">
+    <a href="/" class="brand" aria-label="English RC by wondermayank">
+      <span class="brand-mark">
+        <img src="/favicon.svg" alt="English RC" width="32" height="32">
+      </span>
+      <span class="brand-text">
+        <span class="brand-name">English <span class="brand-accent">RC</span></span>
+        <span class="brand-by">by wondermayank</span>
+      </span>
+    </a>
+
+    <nav class="nav-links" aria-label="Main">
+      <a href="practice.html?cat=grammar">Grammar</a>
+      <a href="practice.html?cat=vocabulary">Vocabulary</a>
+      <a href="weekly-test.html">Weekly Test</a>
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="mistakes.html">Review Mistakes</a>
+    </nav>
+
+    <div class="nav-right">
+      <span id="streak-badge" class="streak-badge"></span>
+
+      <!-- REQUEST FILE -->
+      <a href="https://wondermayank.in/contact" class="nav-request" target="_blank" rel="noopener noreferrer" aria-label="Request a file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+          <path d="M14 3v5h5"/>
+          <path d="M12 12v6M9 15h6"/>
+        </svg>
+        <span class="nav-request-text">Request File</span>
+      </a>
+
+      <!-- THEME -->
+      <button class="theme-btn" id="themeBtn" aria-label="Toggle dark mode">
+        <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4.2"/>
+          <path d="M12 2.5v2.4M12 19.1v2.4"/>
+          <path d="M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7"/>
+          <path d="M2.5 12h2.4M19.1 12h2.4"/>
+          <path d="M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/>
+        </svg>
+        <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="display:none">
+          <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/>
+        </svg>
+      </button>
+
+      <!-- CTA slot: Telegram login (rendered by script) -->
+      <div class="telegram-card" id="telegram-card"></div>
+
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+        <svg id="hamburgerOpen" aria-hidden="true"><use href="#u-menu"/></svg>
+        <svg id="hamburgerClose" aria-hidden="true" style="display:none"><use href="#u-x"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="mobile-menu" id="mobileMenu">
     <a href="index.html" class="active">Home</a>
     <a href="practice.html?cat=grammar">Grammar</a>
     <a href="practice.html?cat=vocabulary">Vocabulary</a>
     <a href="weekly-test.html">Weekly Test</a>
     <a href="leaderboard.html">Leaderboard</a>
     <a href="mistakes.html">Review Mistakes</a>
+    <span id="streak-badge-mobile" class="streak-badge"></span>
   </div>
-  <div class="nav-cta">
-    <span id="streak-badge" class="streak-badge"></span>
-    <div class="telegram-card" id="telegram-card"></div>
-  </div>
-</nav>
+</header>
 
+<main>
+
+<!-- HERO -->
 <section class="hero">
-  <div>
-    <span class="eyebrow">★ Master. Practice. Achieve.</span>
-    <h1 class="hero-title">Master <span class="accent">RC</span>,<br>Grammar &amp; Vocabulary</h1>
-    <p class="hero-sub">Free daily Reading Comprehension, Grammar and Vocabulary practice — a fresh set every day, plus a full CBT-style test every Sunday covering the whole week.</p>
-    <div class="hero-actions">
-      <a href="practice.html" class="btn btn-primary">Start Learning <span class="icon-circle">→</span></a>
-      <a href="#topics" class="btn btn-secondary" id="hero-secondary-btn">Explore Topics</a>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <div class="wrap">
+    <div>
+      <span class="eyebrow"><svg aria-hidden="true"><use href="#u-star"/></svg> Master. Practice. Achieve.</span>
+      <h1 class="hero-title">Master <span class="accent">RC</span>,<br>Grammar &amp; Vocabulary</h1>
+      <p class="hero-sub">Free daily Reading Comprehension, Grammar and Vocabulary practice — a fresh set every day, plus a full CBT-style test every Sunday covering the whole week.</p>
+
+      <div class="hero-actions">
+        <a href="practice.html" class="primary-btn">Start Learning <svg aria-hidden="true"><use href="#u-arrow"/></svg></a>
+        <a href="#topics" class="secondary-btn" id="hero-secondary-btn">Explore Topics</a>
+      </div>
+
+      <div class="hero-features">
+        <div class="hero-feature">
+          <span class="icon-tile" style="--accent:#8B3DE8;--tint:#ECDBFF"><svg aria-hidden="true"><use href="#u-sparkles"/></svg></span>
+          <div><strong>AI Generated</strong><span>Fresh daily</span></div>
+        </div>
+        <div class="hero-feature">
+          <span class="icon-tile" style="--accent:#2F6FEE;--tint:#DCEBFF"><svg aria-hidden="true"><use href="#u-trend"/></svg></span>
+          <div><strong>Track Progress</strong><span>Day by day</span></div>
+        </div>
+        <div class="hero-feature">
+          <span class="icon-tile" style="--accent:#E0467F;--tint:#FFE0ED"><svg aria-hidden="true"><use href="#u-calendar"/></svg></span>
+          <div><strong>Weekly Test</strong><span>Every Sunday</span></div>
+        </div>
+      </div>
     </div>
-    <div class="hero-features">
-      <div class="hero-feature"><span class="dot">🤖</span><div><strong>AI Generated</strong><span>Fresh daily</span></div></div>
-      <div class="hero-feature"><span class="dot">📈</span><div><strong>Track Progress</strong><span>Day by day</span></div></div>
-      <div class="hero-feature"><span class="dot">🗓️</span><div><strong>Weekly Test</strong><span>Every Sunday</span></div></div>
+
+    <div class="hero-visual">
+      <div class="hero-art">
+        <img src="book.png" alt="Illustrated open book reading Learn. Practice. Excel." loading="lazy">
+      </div>
     </div>
-  </div>
-  <div class="hero-visual">
-    <img src="book.png" alt="Illustrated open book reading Learn. Practice. Excel." loading="lazy">
   </div>
 </section>
 
-<div class="stats-bar wrap">
-  <div class="stat"><span class="dot">📚</span><div><div class="stat-num" id="stat-days">—</div><div class="stat-label">Days of Practice</div></div></div>
-  <div class="stat"><span class="dot">✏️</span><div><div class="stat-num" id="stat-questions">—</div><div class="stat-label">Practice Questions</div></div></div>
-  <div class="stat"><span class="dot">🗓️</span><div><div class="stat-num">Sunday</div><div class="stat-label">Weekly Test Day</div></div></div>
-  <div class="stat"><span class="dot">🆓</span><div><div class="stat-num">Free</div><div class="stat-label">Always</div></div></div>
-</div>
+<!-- STATS -->
+<section class="stats-section">
+  <div class="wrap">
+    <div class="stats-bar">
+      <div class="stat">
+        <span class="icon-tile" style="--accent:#1AA3E8;--tint:#DCF1FE"><svg aria-hidden="true"><use href="#u-library"/></svg></span>
+        <div><div class="stat-num" id="stat-days">—</div><div class="stat-label">Days of Practice</div></div>
+      </div>
+      <div class="stat">
+        <span class="icon-tile" style="--accent:#E0622E;--tint:#FFE3D2"><svg aria-hidden="true"><use href="#u-pencil"/></svg></span>
+        <div><div class="stat-num" id="stat-questions">—</div><div class="stat-label">Practice Questions</div></div>
+      </div>
+      <div class="stat">
+        <span class="icon-tile" style="--accent:#E0467F;--tint:#FFE0ED"><svg aria-hidden="true"><use href="#u-calendar"/></svg></span>
+        <div><div class="stat-num">Sunday</div><div class="stat-label">Weekly Test Day</div></div>
+      </div>
+      <div class="stat">
+        <span class="icon-tile" style="--accent:#0EA894;--tint:#D7F5EF"><svg aria-hidden="true"><use href="#u-gift"/></svg></span>
+        <div><div class="stat-num">Free</div><div class="stat-label">Always</div></div>
+      </div>
+    </div>
+  </div>
+</section>
 
-<div class="wrap" id="topics">
-  <div class="section-head">
-    <div>
-      <span class="eyebrow-label">Choose a topic</span>
+<!-- TOPICS -->
+<section class="section parchment" id="topics">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-eyebrow">Choose a topic</span>
       <h2 class="section-title">Learn. Practice. Improve.</h2>
       <p class="section-desc">A new set drops every morning. Pick a topic to begin today's practice.</p>
     </div>
+
+    <div class="tool-grid">
+      <a href="practice.html?cat=rc" class="tool-card" style="--accent:#2F6FEE;--tint:#DCEBFF">
+        <div class="tool-icon"><svg aria-hidden="true"><use href="#u-book-open"/></svg></div>
+        <span class="topic-tag">RC</span>
+        <h3>Reading Comprehension</h3>
+        <p>A new passage and 5 questions every day — inference, tone, theme and detail.</p>
+        <span class="tool-link">Practice <svg aria-hidden="true"><use href="#u-arrow"/></svg></span>
+      </a>
+
+      <a href="practice.html?cat=grammar" class="tool-card" style="--accent:#8B3DE8;--tint:#ECDBFF">
+        <div class="tool-icon"><svg aria-hidden="true"><use href="#u-type"/></svg></div>
+        <span class="topic-tag">Grammar</span>
+        <h3>Grammar</h3>
+        <p>Tenses, subject-verb agreement, voice, speech, articles &amp; prepositions.</p>
+        <span class="tool-link">Practice <svg aria-hidden="true"><use href="#u-arrow"/></svg></span>
+      </a>
+
+      <a href="practice.html?cat=vocabulary" class="tool-card" style="--accent:#0EA894;--tint:#D7F5EF">
+        <div class="tool-icon"><svg aria-hidden="true"><use href="#u-book-a"/></svg></div>
+        <span class="topic-tag">Vocabulary</span>
+        <h3>Vocabulary</h3>
+        <p>Synonyms, antonyms, idioms, one-word substitution and spelling.</p>
+        <span class="tool-link">Practice <svg aria-hidden="true"><use href="#u-arrow"/></svg></span>
+      </a>
+
+      <a href="leaderboard.html" class="tool-card" style="--accent:#D99A1F;--tint:#FFEFCC">
+        <div class="tool-icon"><svg aria-hidden="true"><use href="#u-trophy"/></svg></div>
+        <span class="topic-tag">Leaderboard</span>
+        <h3>Weekly Leaderboard</h3>
+        <p>See this week's top scorers and compete with other students, first name + score.</p>
+        <span class="tool-link">View <svg aria-hidden="true"><use href="#u-arrow"/></svg></span>
+      </a>
+    </div>
   </div>
+</section>
 
-  <div class="topic-grid">
-    <a href="practice.html?cat=rc" class="topic-card rc">
-      <div class="topic-icon">📖</div>
-      <span class="topic-tag">RC</span>
-      <h3>Reading Comprehension</h3>
-      <p>A new passage and 5 questions every day — inference, tone, theme and detail.</p>
-      <button class="topic-go">→</button>
-    </a>
-
-    <a href="practice.html?cat=grammar" class="topic-card grammar">
-      <div class="topic-icon">✒️</div>
-      <span class="topic-tag">Grammar</span>
-      <h3>Grammar</h3>
-      <p>Tenses, subject-verb agreement, voice, speech, articles &amp; prepositions.</p>
-      <button class="topic-go">→</button>
-    </a>
-
-    <a href="practice.html?cat=vocabulary" class="topic-card vocab">
-      <div class="topic-icon">📗</div>
-      <span class="topic-tag">Vocabulary</span>
-      <h3>Vocabulary</h3>
-      <p>Synonyms, antonyms, idioms, one-word substitution and spelling.</p>
-      <button class="topic-go">→</button>
-    </a>
-
-    <a href="leaderboard.html" class="topic-card passages">
-      <div class="topic-icon">🏆</div>
-      <span class="topic-tag">Leaderboard</span>
-      <h3>Weekly Leaderboard</h3>
-      <p>See this week's top scorers and compete with other students, first name + score.</p>
-      <button class="topic-go">→</button>
-    </a>
-  </div>
-</div>
-
-<div class="wrap" id="topics-weekly">
-  <div class="section-head">
-    <div>
-      <span class="eyebrow-label">Once a week</span>
+<!-- WEEKLY CUSTOM SET -->
+<section class="section" id="topics-weekly">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-eyebrow">Once a week</span>
       <h2 class="section-title">Build Your Own Question Set</h2>
       <p class="section-desc">Pick up to 10 topics (or add your own) and choose how many questions. This resets every Monday.</p>
     </div>
-  </div>
-  <div class="topic-picker-card">
-    <div id="topic-checklist" class="topic-checklist"></div>
-    <div class="custom-topic-add">
-      <input type="text" id="custom-topic-input" placeholder="Add your own topic (e.g. Idioms, Cloze Test)" maxlength="40">
-      <button type="button" id="custom-topic-add-btn" class="btn-ghost" style="border-radius:8px;">Add</button>
-    </div>
-    <div id="custom-topic-chips" class="custom-topic-chips"></div>
-    <div class="question-count-row">
-      <label for="question-count">Number of questions</label>
-      <select id="question-count">
-        <option value="10">10</option>
-        <option value="20">20</option>
-        <option value="30">30</option>
-        <option value="40">40</option>
-        <option value="50">50</option>
-      </select>
-    </div>
-    <div class="topic-picker-footer">
-      <span id="topic-picker-status" class="topic-picker-status"></span>
-      <button id="start-custom-btn" class="btn btn-primary">Start Practice <span class="icon-circle">→</span></button>
-    </div>
-  </div>
-  <div id="custom-quiz-area"></div>
-</div>
 
-<div class="footer-strip wrap">
-  <div class="item"><span class="dot">🎯</span><div><strong>Exam Focused</strong><span>SSC, CUET, Banking &amp; more</span></div></div>
-  <div class="item"><span class="dot">💡</span><div><strong>Explained Answers</strong><span>Understand every question</span></div></div>
-  <div class="item"><span class="dot">⏱️</span><div><strong>5 Minutes a Day</strong><span>Fits any schedule</span></div></div>
-  <div class="item"><span class="dot">🏆</span><div><strong>Weekly CBT</strong><span>Test yourself every Sunday</span></div></div>
-</div>
+    <div class="card topic-picker-card">
+      <div id="topic-checklist" class="topic-checklist"></div>
+
+      <div class="custom-topic-add">
+        <input type="text" id="custom-topic-input" placeholder="Add your own topic (e.g. Idioms, Cloze Test)" maxlength="40" aria-label="Add your own topic">
+        <button type="button" id="custom-topic-add-btn" class="secondary-btn">Add</button>
+      </div>
+      <div id="custom-topic-chips" class="custom-topic-chips"></div>
+
+      <div class="question-count-row">
+        <label for="question-count">Number of questions</label>
+        <select id="question-count">
+          <option value="10">10</option>
+          <option value="20">20</option>
+          <option value="30">30</option>
+          <option value="40">40</option>
+          <option value="50">50</option>
+        </select>
+      </div>
+
+      <div class="topic-picker-footer">
+        <span id="topic-picker-status" class="topic-picker-status"></span>
+        <button id="start-custom-btn" class="primary-btn">Start Practice <svg aria-hidden="true"><use href="#u-arrow"/></svg></button>
+      </div>
+    </div>
+
+    <div id="custom-quiz-area"></div>
+  </div>
+</section>
+
+<!-- WHY STRIP -->
+<section class="section parchment">
+  <div class="wrap">
+    <div class="feature-strip">
+      <div class="feature-item">
+        <span class="icon-tile" style="--accent:#2F6FEE;--tint:#DCEBFF"><svg aria-hidden="true"><use href="#u-target"/></svg></span>
+        <div><strong>Exam Focused</strong><span class="sub">SSC, CUET, Banking &amp; more</span></div>
+      </div>
+      <div class="feature-item">
+        <span class="icon-tile" style="--accent:#D99A1F;--tint:#FFEFCC"><svg aria-hidden="true"><use href="#u-bulb"/></svg></span>
+        <div><strong>Explained Answers</strong><span class="sub">Understand every question</span></div>
+      </div>
+      <div class="feature-item">
+        <span class="icon-tile" style="--accent:#0EA894;--tint:#D7F5EF"><svg aria-hidden="true"><use href="#u-timer"/></svg></span>
+        <div><strong>5 Minutes a Day</strong><span class="sub">Fits any schedule</span></div>
+      </div>
+      <div class="feature-item">
+        <span class="icon-tile" style="--accent:#8B3DE8;--tint:#ECDBFF"><svg aria-hidden="true"><use href="#u-trophy"/></svg></span>
+        <div><strong>Weekly CBT</strong><span class="sub">Test yourself every Sunday</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-instagram" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></symbol>
+      <symbol id="i-youtube" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l11.733 16h4.267l-11.733 -16z"/><path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"/></symbol>
+      <symbol id="i-reddit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="14" rx="8" ry="5.5"/><circle cx="4.5" cy="11.5" r="1.6"/><circle cx="19.5" cy="11.5" r="1.6"/><path d="M12 8.5 13 4l4 1"/><circle cx="18" cy="5.2" r="1.2"/><path d="M9 13.5h.01M15 13.5h.01"/><path d="M9.5 16.5c1.4 1 3.6 1 5 0"/></symbol>
+      <symbol id="i-telegram" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="wrap">
+    <div class="footer-grid">
+
+      <div class="footer-brand-col">
+        <a href="/" class="footer-brand" aria-label="English RC by wondermayank">
+          <span class="brand-mark">
+            <img src="/favicon.svg" alt="English RC" width="22" height="22">
+          </span>
+          <span class="footer-brand-text">
+            <span class="footer-brand-name">English <span class="brand-accent">RC</span></span>
+            <span class="footer-brand-by">by wondermayank</span>
+          </span>
+        </a>
+
+        <p class="footer-desc">Free project tools and exam-prep resources for Indian competitive exam students.</p>
+
+        <div class="footer-social">
+        <div>
+          <div class="footer-social-label">Wondermayank</div>
+          <div class="footer-social-row">
+            <a class="social-btn" href="https://www.instagram.com/wondermayank" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on Instagram" title="Instagram"><svg aria-hidden="true"><use href="#i-instagram"/></svg></a>
+            <a class="social-btn" href="https://www.youtube.com/@wondermayank" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on YouTube" title="YouTube"><svg aria-hidden="true"><use href="#i-youtube"/></svg></a>
+            <a class="social-btn" href="https://x.com/wondermayankx" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on X" title="X"><svg aria-hidden="true"><use href="#i-x"/></svg></a>
+            <a class="social-btn" href="https://www.reddit.com/user/wondermayankx" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on Reddit" title="Reddit"><svg aria-hidden="true"><use href="#i-reddit"/></svg></a>
+            <a class="social-btn" href="https://t.me/wondermayank" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on Telegram" title="Telegram"><svg aria-hidden="true"><use href="#i-telegram"/></svg></a>
+          </div>
+        </div>
+        <div>
+          <div class="footer-social-label">ThunderStudy</div>
+          <div class="footer-social-row">
+            <a class="social-btn" href="https://www.instagram.com/thunderstudyx" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on Instagram" title="Instagram"><svg aria-hidden="true"><use href="#i-instagram"/></svg></a>
+            <a class="social-btn" href="https://www.youtube.com/@thunderstudy_official" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on YouTube" title="YouTube"><svg aria-hidden="true"><use href="#i-youtube"/></svg></a>
+            <a class="social-btn" href="https://x.com/thunderstudyx" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on X" title="X"><svg aria-hidden="true"><use href="#i-x"/></svg></a>
+            <a class="social-btn" href="https://www.reddit.com/user/thunderstudyx" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on Reddit" title="Reddit"><svg aria-hidden="true"><use href="#i-reddit"/></svg></a>
+            <a class="social-btn" href="https://t.me/thunderstudy" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on Telegram" title="Telegram"><svg aria-hidden="true"><use href="#i-telegram"/></svg></a>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <nav aria-label="ThunderStudy">
+        <h2 class="footer-title">ThunderStudy</h2>
+        <ul class="footer-links">
+          <li><a href="https://thunderstudy.indevs.in">ThunderStudy</a></li>
+          <li><a href="https://thundertest.indevs.in">CBT Mock</a></li>
+          <li><a href="https://blog.thunderstudy.indevs.in">Blog</a></li>
+          <li><a href="https://thunderstudy.indevs.in/about">Help / Donate</a></li>
+        </ul>
+      </nav>
+
+      <nav aria-label="Support">
+        <h2 class="footer-title">Support</h2>
+        <ul class="footer-links">
+          <li><a href="https://wondermayank.in/fqa">FAQ</a></li>
+          <li><a href="https://wondermayank.in/mail">Mail</a></li>
+          <li><a href="https://wondermayank.in/contact">Contact</a></li>
+        </ul>
+      </nav>
+
+      <nav aria-label="wondermayank">
+        <h2 class="footer-title">wondermayank</h2>
+        <ul class="footer-links">
+          <li><a href="https://make.wondermayank.in">Vibecoding</a></li>
+          <li><a href="https://project.wondermayank.in">Useful Projects</a></li>
+          <li><a href="https://wondermayank.in">Portfolio</a></li>
+          <li><a href="https://blog.wondermayank.indevs.in/">Blog</a></li>
+        </ul>
+      </nav>
+
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="wrap footer-bottom-inner">
+      <div class="footer-copy">© 2026 ThunderStudy by wondermayank. All rights reserved.</div>
+
+      <nav class="footer-legal" aria-label="Legal">
+        <a href="https://wondermayank.in/terms">Terms</a>
+        <a href="https://wondermayank.in/privacy">Privacy</a>
+        <a href="https://wondermayank.in/disclaimer">Disclaimer</a>
+        <a href="/sitemap">Sitemap</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* =========================
+   LOADER
+========================= */
+window.addEventListener('DOMContentLoaded',function(){
+  setTimeout(function(){
+    var loader=document.getElementById('loader');
+    if(loader){ loader.classList.add('hide'); }
+  },200);
+});
+setTimeout(function(){
+  var loader=document.getElementById('loader');
+  if(loader){ loader.classList.add('hide'); }
+},1500);
+
+/* =========================
+   THEME
+========================= */
+var themeBtn=document.getElementById('themeBtn');
+var sunIcon=document.getElementById('themeIconSun');
+var moonIcon=document.getElementById('themeIconMoon');
+
+function syncIcons(){
+  var theme=document.documentElement.getAttribute('data-theme');
+  sunIcon.style.display=theme === 'dark' ? 'none' : 'block';
+  moonIcon.style.display=theme === 'dark' ? 'block' : 'none';
+}
+syncIcons();
+themeBtn.addEventListener('click',function(){
+  var next=document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try{ localStorage.setItem('theme', next); }catch(e){}
+  syncIcons();
+});
+
+/* =========================
+   MOBILE MENU
+========================= */
+(function(){
+  var btn=document.getElementById('hamburger');
+  var menu=document.getElementById('mobileMenu');
+  var iconOpen=document.getElementById('hamburgerOpen');
+  var iconClose=document.getElementById('hamburgerClose');
+  btn.addEventListener('click',function(){
+    var open=menu.classList.toggle('open');
+    btn.setAttribute('aria-expanded',String(open));
+    btn.setAttribute('aria-label',open ? 'Close menu' : 'Open menu');
+    iconOpen.style.display=open ? 'none' : 'block';
+    iconClose.style.display=open ? 'block' : 'none';
+  });
+  menu.addEventListener('click',function(e){
+    if(e.target.tagName === 'A'){ btn.click(); }
+  });
+})();
+</script>
 
 <script src="progress.js"></script>
-<script src="nav.js"></script>
 <script src="pwa.js"></script>
 <script>
   fetch('/api/days').then(r => r.json()).then(d => {
@@ -169,7 +1366,21 @@
     document.getElementById('stat-questions').textContent = days.reduce((a, b) => a + b.count, 0);
   }).catch(() => {});
 
-  document.getElementById('streak-badge').textContent = WM.currentStreak() > 0 ? `\u{1F525} ${WM.currentStreak()} day streak` : '';
+  (function () {
+    const streak = WM.currentStreak();
+    ['streak-badge', 'streak-badge-mobile'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (streak > 0) {
+        const label = id === 'streak-badge' ? `${streak}` : `${streak} day streak`;
+        el.innerHTML = `<svg aria-hidden="true" style="--accent:#E0622E"><use href="#u-flame"/></svg> ${label}`;
+        el.setAttribute('title', `${streak} day streak`);
+        el.setAttribute('aria-label', `${streak} day streak`);
+      } else {
+        el.innerHTML = '';
+      }
+    });
+  })();
 
   // ---------- Install App button (hero) ----------
   // Doubles as "Explore Topics" until the site is installable, then becomes "Install App";
@@ -189,7 +1400,7 @@
     }
 
     function showInstallButton() {
-      heroBtn.textContent = '📲 Install App';
+      heroBtn.innerHTML = '<svg aria-hidden="true"><use href="#u-download"/></svg> Install App';
       heroBtn.removeAttribute('href');
       heroBtn.onclick = async (e) => {
         e.preventDefault();
@@ -237,7 +1448,7 @@
         <div class="telegram-signed-in">
           ${user.photo_url ? `<img src="${user.photo_url}" alt="" class="telegram-avatar">` : ''}
           <span class="telegram-name">${user.first_name || 'Signed in'}</span>
-          <button id="telegram-logout-btn" class="telegram-logout-btn" title="Sign out" aria-label="Sign out">×</button>
+          <button id="telegram-logout-btn" class="telegram-logout-btn" title="Sign out" aria-label="Sign out"><svg aria-hidden="true"><use href="#u-x"/></svg></button>
         </div>
       `;
       document.getElementById('telegram-logout-btn').addEventListener('click', () => {
@@ -250,21 +1461,21 @@
     el.innerHTML = `
       <div class="telegram-login-wrap">
         <button type="button" id="telegram-login-btn" class="telegram-login-btn" aria-haspopup="true" aria-expanded="false">
-          <svg class="tg-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11.5L20.5 4l-3 16-6-4.5-3 3-.5-5L20 6.5 6.5 13 3 11.5Z" fill="currentColor"/></svg>
-          Log in with Telegram
-          <svg class="tg-chevron" viewBox="0 0 12 8" fill="none" aria-hidden="true"><path d="M1 1.5 6 6.5 11 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="tg-icon" aria-hidden="true"><use href="#i-telegram"/></svg>
+          Log in<span class="tg-long">&nbsp;with Telegram</span>
+          <svg class="tg-chevron" aria-hidden="true"><use href="#u-chevron"/></svg>
         </button>
         <div class="telegram-menu" id="telegram-menu" role="menu">
           <button type="button" class="telegram-menu-item" id="telegram-browser-btn" role="menuitem">
-            <span class="tmi-icon">🌐</span>
+            <span class="tmi-icon" style="--accent:#2F6FEE;--tint:#DCEBFF"><svg aria-hidden="true"><use href="#u-globe"/></svg></span>
             <span><strong>Continue in browser</strong><small>Opens in a small popup window</small></span>
           </button>
           <button type="button" class="telegram-menu-item" id="telegram-deeplink-btn" role="menuitem">
-            <span class="tmi-icon">🔗</span>
+            <span class="tmi-icon" style="--accent:#8B3DE8;--tint:#ECDBFF"><svg aria-hidden="true"><use href="#u-link"/></svg></span>
             <span><strong>Log in from Telegram</strong><small>Tap Start in the bot chat to sign in</small></span>
           </button>
           <a class="telegram-menu-item" href="https://t.me/Tiny_english_robot" target="_blank" rel="noopener" role="menuitem">
-            <span class="tmi-icon">💬</span>
+            <span class="tmi-icon" style="--accent:#0EA894;--tint:#D7F5EF"><svg aria-hidden="true"><use href="#u-message"/></svg></span>
             <span><strong>Open Telegram app</strong><small>Chat with the bot directly — no web login</small></span>
           </a>
         </div>
@@ -309,19 +1520,19 @@
         if (!data.botLink || !data.code) throw new Error('Could not start Telegram login.');
 
         el.innerHTML = `
-          <div class="telegram-login-wrap" style="text-align:left;">
-            <a href="${data.botLink}" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;justify-content:center;">
-              <svg class="tg-icon" viewBox="0 0 24 24" fill="none" width="16" height="16" aria-hidden="true"><path d="M3 11.5L20.5 4l-3 16-6-4.5-3 3-.5-5L20 6.5 6.5 13 3 11.5Z" fill="currentColor"/></svg>
+          <div class="telegram-login-wrap tg-panel">
+            <a href="${data.botLink}" target="_blank" rel="noopener" class="primary-btn">
+              <svg class="tg-icon" aria-hidden="true"><use href="#i-telegram"/></svg>
               Open Telegram to finish signing in
             </a>
-            <p style="font-size:12.5px;color:var(--text-muted,#8a8a8a);margin:8px 0 4px;">
+            <p class="tg-note">
               If Telegram doesn't open, open it yourself and send this to <strong>@Tiny_english_robot</strong>:
             </p>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <code id="tg-manual-code" style="flex:1;padding:6px 8px;border:1px solid var(--border,#ddd);border-radius:6px;font-size:12.5px;overflow-wrap:anywhere;">/start ${data.code}</code>
-              <button type="button" id="tg-copy-code-btn" class="btn" style="padding:6px 10px;font-size:12px;">Copy</button>
+            <div class="tg-code-row">
+              <code id="tg-manual-code" class="tg-code">/start ${data.code}</code>
+              <button type="button" id="tg-copy-code-btn" class="secondary-btn btn-sm">Copy</button>
             </div>
-            <p id="tg-wait-status" style="font-size:12px;color:var(--text-muted,#8a8a8a);margin:8px 0 0;">Waiting for Telegram…</p>
+            <p id="tg-wait-status" class="tg-status">Waiting for Telegram…</p>
           </div>
         `;
 
@@ -385,7 +1596,7 @@
   function renderCustomChips() {
     const el = document.getElementById('custom-topic-chips');
     el.innerHTML = customTopics.map((t, i) => `
-      <span class="custom-topic-chip">${t}<button type="button" data-i="${i}" aria-label="Remove ${t}">×</button></span>
+      <span class="custom-topic-chip">${t}<button type="button" data-i="${i}" aria-label="Remove ${t}"><svg aria-hidden="true"><use href="#u-x"/></svg></button></span>
     `).join('');
     el.querySelectorAll('button').forEach(btn => {
       btn.addEventListener('click', () => {
