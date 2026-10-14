@@ -1,235 +1,1551 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RC Database Export / Import</title>
+
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('theme');
+    if(!t){ t = 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>D1 Database Tool | English RC by Wondermayank</title>
+<meta name="author" content="Wondermayank">
+<meta name="theme-color" content="#573AFC">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
 <style>
 :root{
-  --bg:#f3f6fc; --card:#ffffff; --ink:#14203a; --mute:#5b6b8c; --line:#d9e1f1;
-  --accent:#4f7cf0; --accent-ink:#ffffff; --ok:#1c8a4f; --bad:#c23a3a; --code:#eef3fd;
+  --canvas:#F4F1FC;
+  --canvas-deep:#ECE6FB;
+  --surface:#FAF8FE;
+
+  --ink:#2B2640;
+  --body-c:#5C5575;
+  --muted:#8B84A0;
+
+  --hairline:rgba(43,38,64,.08);
+
+  --primary:#573AFC;
+  --primary-active:#4527E0;
+  --primary-soft:#E4DEFF;
+  --on-primary:#ffffff;
+
+  --clay-light:rgba(255,255,255,.9);
+  --clay-dark:rgba(120,108,180,.5);
+  --clay-dark-strong:rgba(120,108,180,.5);
+
+  --radius-card:28px;
+  --radius-sm:16px;
+  --radius-pill:999px;
+
+  --font:'Inter',system-ui,-apple-system,sans-serif;
 }
-@media (prefers-color-scheme: dark){
-  :root{--bg:#0e1424; --card:#161e33; --ink:#e6ecfa; --mute:#8fa0c4; --line:#27324f;
-    --accent:#7aa2ff; --accent-ink:#0e1424; --ok:#4cc386; --bad:#ff7b7b; --code:#1b2540;}
+
+[data-theme="dark"]{
+  --canvas:#1A1730;
+  --canvas-deep:#15122A;
+  --surface:#221D3C;
+
+  --ink:#F1EEFB;
+  --body-c:#C7C0E0;
+  --muted:#8E86AC;
+
+  --hairline:rgba(255,255,255,.08);
+
+  --primary:#9A7AFB;
+  --primary-active:#B196FB;
+  --primary-soft:#2E2650;
+  --on-primary:#1A1730;
+
+  --clay-light:rgba(255,255,255,.05);
+  --clay-dark:rgba(0,0,0,.55);
+  --clay-dark-strong:rgba(0,0,0,.7);
 }
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:20px}
-main{max-width:760px;margin:0 auto;display:grid;gap:16px}
-h1{font-size:22px;margin:0 0 2px}
-p.sub{margin:0;color:var(--mute)}
-section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
-h2{font-size:15px;margin:0 0 10px}
-label.f{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
-input[type=text],input[type=password],input[type=url]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit}
-button{font:inherit;border:0;border-radius:9px;padding:10px 16px;background:var(--accent);color:var(--accent-ink);font-weight:600;cursor:pointer}
-button.ghost{background:transparent;color:var(--accent);border:1px solid var(--line);font-weight:500;padding:6px 12px}
-button:disabled{opacity:.5;cursor:not-allowed}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
-.tabs{display:flex;gap:6px}
-.tabs button{background:transparent;color:var(--mute);border:1px solid var(--line);font-weight:500}
-.tabs button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.tbl{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;margin-top:8px;cursor:pointer}
-.tbl input{width:18px;height:18px;accent-color:var(--accent)}
-.tbl b{flex:1;font-weight:600;word-break:break-all}
-.tbl span{color:var(--mute);font-size:13px}
-.opt{display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:14px}
-.opt input{margin-top:3px;accent-color:var(--accent)}
-#log{background:var(--code);border-radius:9px;padding:10px 12px;font:13px/1.55 ui-monospace,Consolas,monospace;max-height:220px;overflow:auto;white-space:pre-wrap;min-height:44px}
-.ok{color:var(--ok)} .bad{color:var(--bad)}
-.hide{display:none}
-.note{font-size:13px;color:var(--mute);margin-top:8px}
+
+*{
+  box-sizing:border-box;
+}
+
+html,
+body{
+  margin:0;
+  padding:0;
+  min-height:100%;
+}
+
+body{
+  font-family:var(--font);
+  background:var(--canvas);
+  color:var(--body-c);
+  -webkit-font-smoothing:antialiased;
+  transition:background .3s ease,color .3s ease;
+  overflow-x:hidden;
+}
+
+a{
+  text-decoration:none;
+  color:inherit;
+}
+
+button{
+  font-family:var(--font);
+  border:none;
+  background:none;
+  cursor:pointer;
+}
+
+.wrap{
+  max-width:1240px;
+  margin:0 auto;
+  padding:0 32px;
+}
+
+@media(max-width:640px){
+  .wrap{
+    padding:0 20px;
+  }
+}
+
+/* =========================
+   LOADER
+========================= */
+
+#loader{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  background:var(--canvas);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  transition:opacity .4s ease,visibility .4s ease;
+}
+
+#loader.hide{
+  opacity:0;
+  visibility:hidden;
+}
+
+.loader-blob{
+  width:64px;
+  height:64px;
+  border-radius:28px;
+  background:var(--primary-soft);
+
+  box-shadow:
+    8px 8px 20px var(--clay-dark),
+    -8px -8px 20px var(--clay-light);
+
+  animation:pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes pulse{
+  0%,100%{
+    transform:scale(.85);
+  }
+
+  50%{
+    transform:scale(1.05);
+  }
+}
+
+/* =========================
+   NAV
+========================= */
+
+.nav{
+  position:sticky;
+  top:0;
+  z-index:50;
+
+  background:var(--canvas);
+  border-bottom:1px solid var(--hairline);
+
+  backdrop-filter:blur(16px) saturate(160%);
+}
+
+.nav .wrap{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  height:76px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  font-weight:700;
+  font-size:16px;
+  color:var(--ink);
+}
+
+.brand-text{
+  display:flex;
+  flex-direction:column;
+  line-height:1.15;
+}
+
+.brand-name{
+  color:var(--ink);            /* "Thunder": white in dark mode, dark ink in light mode */
+  font-size:17px;
+  font-weight:700;
+  letter-spacing:-.2px;
+}
+
+.brand-accent{
+  color:var(--primary);        /* "Study": blue in light mode, purple in dark mode */
+}
+
+.brand-by{
+  color:var(--muted);
+  font-size:11.5px;
+  font-weight:400;
+  letter-spacing:.1px;
+}
+
+.brand-mark{
+  width:36px;
+  height:36px;
+  border-radius:12px;
+
+  background:var(--primary);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  box-shadow:
+    4px 4px 10px var(--clay-dark),
+    -4px -4px 10px var(--clay-light);
+}
+
+.brand-mark img{
+  width:18px;
+  height:18px;
+}
+
+.nav-right{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.theme-btn{
+  width:40px;
+  height:40px;
+
+  border-radius:14px;
+  background:var(--surface);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  color:var(--ink);
+
+  box-shadow:
+    4px 4px 10px var(--clay-dark),
+    -4px -4px 10px var(--clay-light);
+
+  transition:transform .2s ease;
+}
+
+.theme-btn:hover{
+  transform:translateY(-2px);
+}
+
+.theme-btn svg{
+  width:18px;
+  height:18px;
+}
+
+.nav-cta{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  height:40px;
+  padding:0 18px;
+
+  border-radius:var(--radius-pill);
+
+  background:var(--primary);
+  color:var(--on-primary);
+
+  font-size:14px;
+  font-weight:600;
+
+  box-shadow:
+    4px 4px 10px var(--clay-dark),
+    -4px -4px 10px var(--clay-light);
+
+  transition:transform .2s ease,background .2s ease;
+}
+
+.nav-cta:hover{
+  background:var(--primary-active);
+  transform:translateY(-2px);
+}
+
+.nav-request{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+
+  height:40px;
+  padding:0 16px;
+
+  border-radius:var(--radius-pill);
+
+  background:var(--surface);
+  color:var(--ink);
+
+  font-size:14px;
+  font-weight:600;
+  white-space:nowrap;
+
+  box-shadow:
+    4px 4px 10px var(--clay-dark),
+    -4px -4px 10px var(--clay-light);
+
+  transition:transform .2s ease,color .2s ease;
+}
+
+.nav-request:hover{
+  color:var(--primary);
+  transform:translateY(-2px);
+}
+
+.nav-request svg{
+  width:17px;
+  height:17px;
+  flex-shrink:0;
+}
+
+/* BUTTONS */
+.primary-btn,
+.secondary-btn{
+  min-height:46px;
+
+  padding:0 22px;
+
+  border-radius:var(--radius-pill);
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+
+  font-size:14px;
+  font-weight:700;
+
+  transition:
+    transform .2s ease,
+    box-shadow .2s ease,
+    background .2s ease;
+}
+
+.primary-btn{
+  background:var(--primary);
+  color:var(--on-primary);
+
+  box-shadow:
+    6px 6px 14px var(--clay-dark),
+    -6px -6px 14px var(--clay-light);
+}
+
+.primary-btn:hover{
+  background:var(--primary-active);
+  transform:translateY(-3px);
+}
+
+.secondary-btn{
+  background:var(--surface);
+  color:var(--ink);
+
+  box-shadow:
+    6px 6px 14px var(--clay-dark),
+    -6px -6px 14px var(--clay-light);
+}
+
+.secondary-btn:hover{
+  color:var(--primary);
+  transform:translateY(-3px);
+}
+
+.primary-btn svg,
+.secondary-btn svg{
+  width:17px;
+  height:17px;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+footer{
+  background:var(--surface);
+  border-top:1px solid var(--hairline);
+  color:var(--muted);
+  padding-top:64px;
+}
+
+.footer-grid{
+  display:grid;
+  grid-template-columns:1.5fr 1fr 1fr 1fr;
+  gap:40px 48px;
+  padding-bottom:48px;
+}
+
+/* brand column */
+.footer-brand{
+  display:inline-flex;
+  align-items:center;
+  gap:12px;
+  color:var(--ink);
+}
+
+.footer-brand .brand-mark{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  box-shadow:none;
+}
+
+.footer-brand .brand-mark img{
+  width:22px;
+  height:22px;
+}
+
+.footer-brand-text{
+  display:flex;
+  flex-direction:column;
+  line-height:1.2;
+}
+
+.footer-brand-name{
+  color:var(--ink);
+  font-size:20px;
+  font-weight:700;
+}
+
+.footer-brand-by{
+  color:var(--muted);
+  font-size:13px;
+  font-weight:400;
+}
+
+.footer-desc{
+  margin:16px 0 0;
+  max-width:300px;
+
+  color:var(--muted);
+
+  font-size:14px;
+  font-weight:300;
+  line-height:1.55;
+}
+
+.footer-social{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  margin-top:24px;
+}
+
+.footer-social-label{
+  margin-bottom:6px;
+
+  color:var(--muted);
+
+  font-size:12px;
+  line-height:1.3;
+}
+
+.footer-social-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.social-btn{
+  width:44px;
+  height:44px;
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  border-radius:50%;
+  border:1px solid var(--hairline);
+
+  background:var(--canvas);
+  color:var(--ink);
+
+  transition:
+    transform .2s ease,
+    color .2s ease,
+    border-color .2s ease;
+}
+
+.social-btn:hover,
+.social-btn:focus-visible{
+  color:var(--primary);
+  border-color:var(--primary);
+  transform:translateY(-2px);
+}
+
+.social-btn:active{
+  transform:scale(.95);
+}
+
+.social-btn svg{
+  width:18px;
+  height:18px;
+}
+
+/* link columns */
+.footer-title{
+  margin:0 0 12px;
+
+  color:var(--ink);
+
+  font-size:18px;
+  font-weight:700;
+  line-height:1.4;
+}
+
+.footer-links{
+  list-style:none;
+  margin:0;
+  padding:0;
+}
+
+.footer-links a,
+.footer-legal a{
+  display:inline-flex;
+  align-items:center;
+
+  min-height:44px;
+
+  color:var(--body-c);
+
+  font-size:15px;
+  font-weight:400;
+  line-height:1.4;
+
+  transition:color .2s ease;
+}
+
+.footer-links a:hover,
+.footer-links a:focus-visible,
+.footer-legal a:hover,
+.footer-legal a:focus-visible{
+  color:var(--primary);
+}
+
+/* bottom bar */
+.footer-bottom{
+  border-top:1px solid var(--hairline-strong,var(--hairline));
+}
+
+.footer-bottom-inner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:8px 24px;
+
+  padding-top:14px;
+  padding-bottom:14px;
+}
+
+.footer-copy{
+  color:var(--muted);
+
+  font-size:14px;
+  line-height:1.43;
+  letter-spacing:-.1px;
+}
+
+.footer-legal{
+  display:flex;
+  flex-wrap:wrap;
+  gap:0 28px;
+}
+
+@media(max-width:900px){
+  .footer-grid{
+    grid-template-columns:repeat(3,1fr);
+  }
+
+  .footer-brand-col{
+    grid-column:1 / -1;
+  }
+}
+
+@media(max-width:640px){
+  footer{
+    padding-top:48px;
+  }
+
+  .footer-grid{
+    grid-template-columns:1fr;
+    gap:28px;
+    padding-bottom:32px;
+  }
+
+  .footer-bottom-inner{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+}
+:root{color-scheme:light;--success:#22c55e;--error:#dc2626;}
+[data-theme="dark"]{color-scheme:dark;}
+h1,h2,h3{color:var(--ink);margin:0;}
+p{margin:0;}
+svg{flex-shrink:0;}
+.clay-press{transition:transform .15s ease,box-shadow .15s ease;}
+.clay-press:active{transform:scale(.96);box-shadow:inset 5px 5px 12px var(--clay-dark),inset -5px -5px 12px var(--clay-light);}
+.brand,.brand-name{white-space:nowrap;}
+
+/* page */
+.page{position:relative;overflow:hidden;padding:56px 0 88px;min-height:calc(100vh - 76px);}
+.blob{position:absolute;border-radius:50%;filter:blur(2px);opacity:.55;z-index:0;pointer-events:none;}
+.blob-1{width:340px;height:340px;background:var(--primary-soft);top:-100px;left:-120px;}
+.blob-2{width:260px;height:260px;background:#FFE3D2;bottom:-90px;right:-80px;}
+[data-theme="dark"] .blob{opacity:.15;}
+.content{position:relative;z-index:1;max-width:860px;margin:0 auto;}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:var(--radius-pill);background:var(--surface);color:var(--primary);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;box-shadow:4px 4px 10px var(--clay-dark),-4px -4px 10px var(--clay-light);}
+.eyebrow svg{width:15px;height:15px;}
+.page-title{margin-top:20px;font-size:34px;line-height:1.15;font-weight:700;letter-spacing:-.3px;}
+.accent{color:var(--primary);}
+.page-sub{margin-top:10px;font-size:16px;line-height:1.5;color:var(--body-c);}
+
+.card{background:var(--surface);border-radius:var(--radius-card);padding:28px 28px;box-shadow:10px 10px 24px var(--clay-dark),-10px -10px 24px var(--clay-light);margin-top:24px;}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:32px;}
+.stat{display:flex;align-items:center;gap:14px;background:var(--surface);border-radius:var(--radius-card);padding:22px 22px;box-shadow:8px 8px 20px var(--clay-dark),-8px -8px 20px var(--clay-light);}
+.icon-tile{width:48px;height:48px;border-radius:16px;background:var(--tint);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);}
+.icon-tile svg{width:22px;height:22px;}
+.stat .lbl{display:block;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;}
+.stat .val{display:block;margin-top:4px;color:var(--ink);font-size:20px;font-weight:700;line-height:1.2;}
+.stat .val small{font-size:12.5px;font-weight:400;color:var(--muted);}
+
+.actions{display:flex;flex-direction:column;align-items:center;gap:18px;padding:8px 0 10px;}
+.make{min-height:56px;padding:0 48px;font-size:16px;min-width:220px;}
+.make svg{width:20px;height:20px;}
+.make:disabled{opacity:.85;cursor:default;transform:none;}
+.make:disabled:hover{background:var(--primary);transform:none;}
+.make.done,.make.done:disabled{background:var(--surface);color:var(--ink);opacity:1;}
+.make.done:hover{background:var(--surface);color:var(--ink);}
+.make.done svg{color:var(--success);}
+.spin{animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.bar{display:none;width:100%;height:10px;border-radius:99px;background:var(--primary-soft);overflow:hidden;}
+.bar.on{display:block;}
+.bar i{display:block;height:100%;width:0;border-radius:99px;background:var(--primary);transition:width .35s ease;}
+.msg{min-height:20px;text-align:center;font-size:14.5px;line-height:1.5;color:var(--body-c);}
+.msg b{color:var(--ink);font-weight:600;}
+
+details{margin-top:10px;padding-top:18px;border-top:1px solid var(--hairline);}
+summary{cursor:pointer;display:inline-flex;align-items:center;gap:8px;list-style:none;color:var(--ink);font-size:14px;font-weight:600;}
+summary::-webkit-details-marker{display:none;}
+summary svg{width:17px;height:17px;color:var(--primary);}
+summary .chev{width:14px;height:14px;color:var(--muted);transition:transform .2s ease;}
+details[open] summary .chev{transform:rotate(180deg);}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
+label{display:block;margin-bottom:6px;color:var(--muted);font-size:12.5px;font-weight:600;line-height:1.4;}
+input{width:100%;height:46px;padding:0 16px;border:1px solid var(--hairline);border-radius:var(--radius-sm);background:var(--canvas);color:var(--ink);font-family:var(--font);font-size:14.5px;outline:none;transition:border-color .2s ease,box-shadow .2s ease;}
+input::placeholder{color:var(--muted);}
+input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);}
+
+.row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;}
+.row h2{font-size:18px;font-weight:700;}
+.legend{display:flex;flex-wrap:wrap;gap:16px;color:var(--muted);font-size:12.5px;}
+.legend span{display:inline-flex;align-items:center;gap:8px;}
+.dot{display:inline-block;width:12px;height:12px;border-radius:5px;}
+.dot.l-done{background:#D7F5EF;box-shadow:inset 0 0 0 1.5px #0EA894;}
+.dot.l-missing{background:var(--primary-soft);border:1.5px dashed var(--primary);}
+.dot.l-run{background:var(--primary);}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:10px;max-height:340px;overflow-y:auto;padding:6px 8px 10px 6px;}
+.chip{padding:9px 6px;border-radius:14px;text-align:center;font-size:12.5px;font-weight:600;line-height:1.25;border:1px solid transparent;transition:transform .25s ease,background .25s ease,color .25s ease;}
+.chip small{display:block;margin-top:1px;font-size:10.5px;font-weight:400;opacity:.8;}
+.chip.done{background:#D7F5EF;color:#0B7F70;}
+.chip.missing{background:var(--primary-soft);color:var(--primary);border:1px dashed var(--primary);}
+.chip.partial{background:var(--primary-soft);color:var(--primary);border:1px solid var(--primary);}
+.chip.running{background:var(--primary);color:var(--on-primary);transform:scale(1.06);box-shadow:4px 4px 10px var(--clay-dark),-4px -4px 10px var(--clay-light);}
+.chip.failed{background:var(--surface);color:var(--error);border:1.5px solid var(--error);}
+
+.log{max-height:170px;overflow:auto;color:var(--body-c);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.7;white-space:pre-wrap;}
+.log div{display:flex;align-items:flex-start;gap:8px;}
+.log svg{width:14px;height:14px;margin-top:4px;}
+.log .ok svg{color:var(--success);}
+.log .err{color:var(--error);font-weight:700;}
+.log .err svg{color:var(--error);}
+
+@media(max-width:900px){.stats{grid-template-columns:1fr;}}
+@media(max-width:640px){
+  .page{padding:40px 0 64px;min-height:calc(100vh - 68px);}
+  .page-title{font-size:26px;}
+  .card{padding:22px 18px;}
+  .opts{grid-template-columns:1fr;}
+  .make{width:100%;padding:0 24px;}
+  .brand-by{display:none;}
+  .nav-cta{padding:0 14px;}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important;}}
+
+/* NAV RESPONSIVE (identical to 404) */
+@media(max-width:640px){
+  .nav .wrap{height:68px;}
+  .nav-right{gap:8px;}
+  .nav-request{width:40px;padding:0;border-radius:14px;}
+  .nav-request-text{display:none;}
+}
+@media(max-width:400px){
+  .nav .wrap{padding:0 14px;}
+  .nav-right{gap:6px;}
+  .theme-btn,.nav-request{width:36px;height:36px;}
+  .nav-cta{height:36px;padding:0 12px;font-size:13px;}
+}
+/* ===== DB tool ===== */
+select{width:100%;height:46px;padding:0 14px;border:1px solid var(--hairline);border-radius:var(--radius-sm);background:var(--canvas);color:var(--ink);font-family:var(--font);font-size:14.5px;outline:none;transition:border-color .2s ease,box-shadow .2s ease;}
+select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);}
+.hd{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+.hd .icon-tile{width:44px;height:44px;border-radius:14px;}
+.hd h2{font-size:19px;font-weight:700;}
+.hint{font-size:14px;line-height:1.55;color:var(--body-c);margin:0 0 16px;}
+.hint code,.msg code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;background:var(--canvas);padding:2px 7px;border-radius:8px;color:var(--ink);}
+.keyrow{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
+.keyrow .f{flex:1;min-width:220px;}
+.btn-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:18px;}
+.btn-row .primary-btn,.btn-row .secondary-btn{min-width:150px;}
+.primary-btn:disabled,.secondary-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.primary-btn:disabled:hover{background:var(--primary);transform:none;}
+.secondary-btn:disabled:hover{color:var(--ink);transform:none;}
+.danger-btn{min-height:46px;padding:0 22px;border-radius:var(--radius-pill);display:inline-flex;align-items:center;justify-content:center;gap:9px;font-size:14px;font-weight:700;background:var(--error);color:#fff;box-shadow:6px 6px 14px var(--clay-dark),-6px -6px 14px var(--clay-light);transition:transform .2s ease,opacity .2s ease;}
+.danger-btn:hover{transform:translateY(-3px);}
+.danger-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.danger-btn svg{width:17px;height:17px;}
+.primary-btn svg,.secondary-btn svg{width:17px;height:17px;}
+.tools{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+.mini{height:36px;padding:0 16px;border-radius:var(--radius-pill);background:var(--canvas);color:var(--ink);font-size:13px;font-weight:600;border:1px solid var(--hairline);transition:color .2s ease,border-color .2s ease;}
+.mini:hover{color:var(--primary);border-color:var(--primary);}
+.tbl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+.pick{position:relative;display:flex;align-items:center;gap:12px;margin:0;padding:14px 16px;border-radius:var(--radius-sm);background:var(--canvas);border:1.5px solid transparent;cursor:pointer;color:var(--ink);font-size:14px;font-weight:600;transition:border-color .2s ease,background .2s ease;min-height:56px;}
+.pick:hover{border-color:var(--primary-soft);}
+.pick input{position:absolute;opacity:0;width:0;height:0;pointer-events:none;}
+.pick .box{width:22px;height:22px;border-radius:8px;flex:none;background:var(--surface);border:1.5px solid var(--clay-dark);display:flex;align-items:center;justify-content:center;color:transparent;transition:background .2s ease,color .2s ease,border-color .2s ease;}
+.pick .box svg{width:14px;height:14px;}
+.pick input:checked ~ .box{background:var(--primary);border-color:var(--primary);color:var(--on-primary);}
+.pick input:checked ~ .nm,.pick:has(input:checked){border-color:var(--primary);}
+.pick input:focus-visible ~ .box{box-shadow:0 0 0 3px var(--primary-soft);}
+.pick .nm{display:flex;flex-direction:column;min-width:0;line-height:1.3;}
+.pick .nm b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pick .nm small{font-size:12px;font-weight:400;color:var(--muted);}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px;padding:5px;border-radius:var(--radius-pill);background:var(--canvas);}
+.seg label{margin:0;position:relative;}
+.seg input{position:absolute;opacity:0;width:0;height:0;}
+.seg span{display:inline-flex;align-items:center;height:38px;padding:0 18px;border-radius:var(--radius-pill);font-size:13.5px;font-weight:600;color:var(--body-c);cursor:pointer;transition:background .2s ease,color .2s ease;}
+.seg input:checked + span{background:var(--primary);color:var(--on-primary);}
+.seg input:focus-visible + span{box-shadow:0 0 0 3px var(--primary-soft);}
+.lbl-s{display:block;margin:18px 0 8px;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:34px 20px;border-radius:var(--radius-sm);border:2px dashed var(--primary);background:var(--canvas);color:var(--body-c);cursor:pointer;transition:background .2s ease;}
+.drop:hover,.drop.over{background:var(--primary-soft);}
+.drop svg{width:28px;height:28px;color:var(--primary);}
+.drop b{color:var(--ink);font-weight:600;font-size:15px;}
+.drop small{font-size:12.5px;color:var(--muted);}
+.drop input{display:none;}
+.found{margin-top:18px;display:grid;gap:10px;}
+.found-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:var(--radius-sm);background:var(--canvas);font-size:14px;color:var(--ink);font-weight:600;}
+.found-row small{font-weight:400;color:var(--muted);font-size:12.5px;}
+.found-row .bad{color:var(--error);}
+.confirm{margin-top:16px;display:none;}
+.confirm.on{display:block;}
+.confirm input{max-width:260px;}
+.notice{display:flex;gap:10px;align-items:flex-start;margin-top:16px;padding:14px 16px;border-radius:var(--radius-sm);background:var(--primary-soft);color:var(--ink);font-size:13.5px;line-height:1.55;}
+.notice svg{width:18px;height:18px;margin-top:2px;color:var(--primary);}
+.notice.warn{background:rgba(220,38,38,.1);}
+.notice.warn svg{color:var(--error);}
+.cfg{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
+.pill{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:13.5px;font-weight:600;color:var(--muted);}
+.pill i{width:10px;height:10px;border-radius:50%;background:var(--muted);}
+.pill.ok{color:var(--success);}.pill.ok i{background:var(--success);}
+.pill.no{color:var(--error);}.pill.no i{background:var(--error);}
+.hidden{display:none !important;}
+@media(max-width:640px){.cfg{grid-template-columns:1fr;}.btn-row .primary-btn,.btn-row .secondary-btn,.btn-row .danger-btn{width:100%;}}
 </style>
 </head>
 <body>
-<main>
-  <div>
-    <h1>RC Database: Export &amp; Import</h1>
-    <p class="sub">Tick the tables you want. Move data between two deployments of the English RC Worker.</p>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="u-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m11 3 1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/><path d="m18.5 15 .9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"/></symbol>
+    <symbol id="u-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="u-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+    <symbol id="u-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.6 2.2"/></symbol>
+    <symbol id="u-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+    <symbol id="u-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="u-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="u-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="u-table" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18M3 15h18M9 4v16"/></symbol>
+    <symbol id="u-rows" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
+    <symbol id="u-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4.5"/><path d="m11.2 11.8 8.3-8.3M16 7l3 3M14 9l2 2"/></symbol>
+    <symbol id="u-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v4"/></symbol>
+    <symbol id="u-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></symbol>
+    <symbol id="u-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 8 5-5 5 5"/><path d="M5 20h14"/></symbol>
+    <symbol id="u-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  </defs>
+</svg>
+
+<!-- LOADER -->
+<div id="loader" aria-hidden="true">
+  <div class="loader-blob"></div>
+</div>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="wrap">
+    <a href="/" class="brand" aria-label="English RC by wondermayank">
+      <span class="brand-mark">
+        <img src="/favicon.svg" alt="English RC" width="32" height="32">
+      </span>
+      <span class="brand-text">
+        <span class="brand-name">English <span class="brand-accent">RC</span></span>
+        <span class="brand-by">by wondermayank</span>
+      </span>
+    </a>
+
+    <div class="nav-right">
+      <a href="https://wondermayank.in/contact" class="nav-request" target="_blank" rel="noopener noreferrer" aria-label="Request a file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+          <path d="M14 3v5h5"/>
+          <path d="M12 12v6M9 15h6"/>
+        </svg>
+        <span class="nav-request-text">Request File</span>
+      </a>
+
+      <button class="theme-btn" id="themeBtn" aria-label="Toggle dark mode">
+        <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4.2"/>
+          <path d="M12 2.5v2.4M12 19.1v2.4"/>
+          <path d="M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7"/>
+          <path d="M2.5 12h2.4M19.1 12h2.4"/>
+          <path d="M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/>
+        </svg>
+        <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="display:none">
+          <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/>
+        </svg>
+      </button>
+
+      <a href="/" class="nav-cta">Home</a>
+    </div>
   </div>
+</header>
 
-  <section>
-    <h2>1. Connect to a Worker</h2>
-    <label class="f" for="url">Worker / site URL (the one you want to export from or import into)</label>
-    <input id="url" type="url" placeholder="https://english.thunderstudy.indevs.in">
-    <label class="f" for="key">MAKE_KEY (the secret set on that Worker)</label>
-    <input id="key" type="password" placeholder="your MAKE_KEY" autocomplete="off">
-    <div class="row">
-      <button id="connect">Connect</button>
-      <span id="status" class="note"></span>
-    </div>
-  </section>
+<main class="page">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
 
-  <section id="work" class="hide">
-    <div class="tabs">
-      <button id="tabExp" class="on">Export</button>
-      <button id="tabImp">Import</button>
-    </div>
+  <div class="wrap">
+  <div class="content">
 
-    <div id="paneExp">
-      <h2 style="margin-top:14px">2. Choose tables to export</h2>
-      <div class="row" style="margin-top:0">
-        <button class="ghost" id="expAll">Select all</button>
-        <button class="ghost" id="expNone">Select none</button>
+    <span class="eyebrow"><svg aria-hidden="true"><use href="#u-database"/></svg> Admin tool</span>
+    <h1 class="page-title">D1 <span class="accent">database</span> tool</h1>
+    <p class="page-sub">Export a backup or import data into your D1 database straight from the browser.</p>
+
+    <section class="stats">
+      <div class="stat">
+        <span class="icon-tile" style="--accent:#2F6FEE;--tint:#DCEBFF"><svg aria-hidden="true"><use href="#u-database"/></svg></span>
+        <div><span class="lbl">Database</span><span class="val" id="sDb">Not connected</span></div>
       </div>
-      <div id="expList"></div>
-      <label class="opt"><input type="checkbox" id="expSchema" checked><span>Include table structure (so the other database can create the tables itself)</span></label>
-      <div class="row"><button id="doExport">Export to file</button></div>
-    </div>
-
-    <div id="paneImp" class="hide">
-      <h2 style="margin-top:14px">2. Choose a backup file</h2>
-      <input type="file" id="file" accept=".json,application/json">
-      <div id="impList"></div>
-      <div id="impOpts" class="hide">
-        <label class="opt"><input type="radio" name="mode" value="replace" checked><span><b>Replace</b>: empty each ticked table first, then load the file</span></label>
-        <label class="opt"><input type="radio" name="mode" value="merge"><span><b>Merge</b>: keep what is already there, add or update rows from the file</span></label>
-        <label class="opt"><input type="checkbox" id="impSchema" checked><span>Create missing tables first</span></label>
-        <div class="row"><button id="doImport">Import into this Worker</button></div>
+      <div class="stat">
+        <span class="icon-tile" style="--accent:#8B3DE8;--tint:#ECDBFF"><svg aria-hidden="true"><use href="#u-table"/></svg></span>
+        <div><span class="lbl">Tables</span><span class="val" id="sTables">0</span></div>
       </div>
-    </div>
-  </section>
+      <div class="stat">
+        <span class="icon-tile" style="--accent:#0EA894;--tint:#D7F5EF"><svg aria-hidden="true"><use href="#u-rows"/></svg></span>
+        <div><span class="lbl">Total rows</span><span class="val" id="sRows">0</span></div>
+      </div>
+    </section>
 
-  <section>
-    <h2>Progress</h2>
-    <div id="log">Waiting…</div>
-  </section>
+    <!-- CONNECT -->
+    <section class="card">
+      <div class="hd">
+        <span class="icon-tile" style="--accent:#8B3DE8;--tint:#ECDBFF"><svg aria-hidden="true"><use href="#u-key"/></svg></span>
+        <h2>Connect</h2>
+      </div>
+      <p class="hint">Enter the key you set with <code>npx wrangler secret put DB_TOOL_KEY</code> (or your existing <code>MAKE_KEY</code>). It stays in this browser only.</p>
+      <div class="keyrow">
+        <div class="f">
+          <label for="key">Access key</label>
+          <input type="password" id="key" placeholder="Paste your key" autocomplete="off">
+        </div>
+        <button class="primary-btn clay-press" id="connectBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#u-plug"/></svg><span id="connectTxt">Connect</span></button>
+      </div>
+      <div class="pill" id="pill"><i></i><span id="pillTxt">Not connected</span></div>
+    </section>
+
+    <!-- EXPORT -->
+    <section class="card" id="exportCard">
+      <div class="hd">
+        <span class="icon-tile" style="--accent:#2F6FEE;--tint:#DCEBFF"><svg aria-hidden="true"><use href="#u-download"/></svg></span>
+        <h2>Export</h2>
+      </div>
+      <p class="hint">Pick the tables to download. A JSON backup can be imported back later.</p>
+
+      <div class="tools">
+        <button class="mini" id="selAll" type="button">Select all</button>
+        <button class="mini" id="selNone" type="button">Clear</button>
+      </div>
+      <div class="tbl-list" id="expList"><p class="hint" style="margin:0">Connect first to see your tables.</p></div>
+
+      <span class="lbl-s">Format</span>
+      <div class="seg" role="radiogroup" aria-label="Export format">
+        <label><input type="radio" name="fmt" value="json" checked><span>JSON backup</span></label>
+        <label><input type="radio" name="fmt" value="sql"><span>SQL</span></label>
+        <label><input type="radio" name="fmt" value="csv"><span>CSV</span></label>
+      </div>
+      <p class="hint" id="fmtHint" style="margin-top:12px;margin-bottom:0">One file with every selected table. Best for backups and restoring here.</p>
+
+      <div class="bar" id="expBar" style="margin-top:18px"><i id="expFill"></i></div>
+      <div class="btn-row">
+        <button class="primary-btn clay-press" id="expBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#u-download"/></svg><span id="expTxt">Export</span></button>
+        <span class="msg" id="expMsg" style="text-align:left"></span>
+      </div>
+    </section>
+
+    <!-- IMPORT -->
+    <section class="card" id="importCard">
+      <div class="hd">
+        <span class="icon-tile" style="--accent:#0EA894;--tint:#D7F5EF"><svg aria-hidden="true"><use href="#u-upload"/></svg></span>
+        <h2>Import</h2>
+      </div>
+      <p class="hint">Choose a JSON backup made by this tool, or a CSV for one table.</p>
+
+      <label class="drop" id="drop" for="file">
+        <svg aria-hidden="true"><use href="#u-upload"/></svg>
+        <b id="dropTitle">Choose a file or drop it here</b>
+        <small id="dropSub">.json or .csv</small>
+        <input type="file" id="file" accept=".json,.csv,application/json,text/csv">
+      </label>
+
+      <div class="found" id="found"></div>
+
+      <div id="csvTarget" class="hidden" style="margin-top:16px">
+        <label for="csvTable">Import this CSV into table</label>
+        <select id="csvTable"></select>
+      </div>
+
+      <div id="impOpts" class="hidden">
+        <span class="lbl-s">When a row already exists</span>
+        <div class="seg" role="radiogroup" aria-label="Import mode">
+          <label><input type="radio" name="mode" value="ignore" checked><span>Skip it</span></label>
+          <label><input type="radio" name="mode" value="replace"><span>Overwrite it</span></label>
+          <label><input type="radio" name="mode" value="wipe"><span>Wipe table first</span></label>
+        </div>
+        <p class="hint" id="modeHint" style="margin-top:12px;margin-bottom:0">Only new rows are added. Existing rows are left alone.</p>
+
+        <div class="confirm" id="confirm">
+          <div class="notice warn"><svg aria-hidden="true"><use href="#u-alert"/></svg><span>This deletes every row in the selected tables before importing. Take an export first.</span></div>
+          <label for="confirmIn" style="margin-top:14px">Type <b style="color:var(--ink)">WIPE</b> to confirm</label>
+          <input type="text" id="confirmIn" autocomplete="off" placeholder="WIPE">
+        </div>
+
+        <div class="bar" id="impBar" style="margin-top:18px"><i id="impFill"></i></div>
+        <div class="btn-row">
+          <button class="primary-btn clay-press" id="impBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#u-upload"/></svg><span id="impTxt">Import</span></button>
+          <span class="msg" id="impMsg" style="text-align:left"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row"><h2>Log</h2></div>
+      <div class="log" id="log">Nothing yet.</div>
+    </section>
+
+  </div>
+  </div>
 </main>
 
+<!-- FOOTER -->
+<footer>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-instagram" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></symbol>
+      <symbol id="i-youtube" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l11.733 16h4.267l-11.733 -16z"/><path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"/></symbol>
+      <symbol id="i-reddit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="14" rx="8" ry="5.5"/><circle cx="4.5" cy="11.5" r="1.6"/><circle cx="19.5" cy="11.5" r="1.6"/><path d="M12 8.5 13 4l4 1"/><circle cx="18" cy="5.2" r="1.2"/><path d="M9 13.5h.01M15 13.5h.01"/><path d="M9.5 16.5c1.4 1 3.6 1 5 0"/></symbol>
+      <symbol id="i-telegram" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="wrap">
+    <div class="footer-grid">
+
+      <div class="footer-brand-col">
+        <a href="/" class="footer-brand" aria-label="English RC by wondermayank">
+          <span class="brand-mark">
+            <img src="/favicon.svg" alt="English RC" width="22" height="22">
+          </span>
+          <span class="footer-brand-text">
+            <span class="footer-brand-name">English <span class="brand-accent">RC</span></span>
+            <span class="footer-brand-by">by wondermayank</span>
+          </span>
+        </a>
+
+        <p class="footer-desc">Free project tools and exam-prep resources for Indian competitive exam students.</p>
+
+        <div class="footer-social">
+        <div>
+          <div class="footer-social-label">Wondermayank</div>
+          <div class="footer-social-row">
+            <a class="social-btn" href="https://www.instagram.com/wondermayank" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on Instagram" title="Instagram"><svg aria-hidden="true"><use href="#i-instagram"/></svg></a>
+            <a class="social-btn" href="https://www.youtube.com/@wondermayank" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on YouTube" title="YouTube"><svg aria-hidden="true"><use href="#i-youtube"/></svg></a>
+            <a class="social-btn" href="https://x.com/wondermayankx" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on X" title="X"><svg aria-hidden="true"><use href="#i-x"/></svg></a>
+            <a class="social-btn" href="https://www.reddit.com/user/wondermayankx" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on Reddit" title="Reddit"><svg aria-hidden="true"><use href="#i-reddit"/></svg></a>
+            <a class="social-btn" href="https://t.me/wondermayank" target="_blank" rel="noopener noreferrer" aria-label="Wondermayank on Telegram" title="Telegram"><svg aria-hidden="true"><use href="#i-telegram"/></svg></a>
+          </div>
+        </div>
+        <div>
+          <div class="footer-social-label">ThunderStudy</div>
+          <div class="footer-social-row">
+            <a class="social-btn" href="https://www.instagram.com/thunderstudyx" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on Instagram" title="Instagram"><svg aria-hidden="true"><use href="#i-instagram"/></svg></a>
+            <a class="social-btn" href="https://www.youtube.com/@thunderstudy_official" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on YouTube" title="YouTube"><svg aria-hidden="true"><use href="#i-youtube"/></svg></a>
+            <a class="social-btn" href="https://x.com/thunderstudyx" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on X" title="X"><svg aria-hidden="true"><use href="#i-x"/></svg></a>
+            <a class="social-btn" href="https://www.reddit.com/user/thunderstudyx" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on Reddit" title="Reddit"><svg aria-hidden="true"><use href="#i-reddit"/></svg></a>
+            <a class="social-btn" href="https://t.me/thunderstudy" target="_blank" rel="noopener noreferrer" aria-label="ThunderStudy on Telegram" title="Telegram"><svg aria-hidden="true"><use href="#i-telegram"/></svg></a>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <nav aria-label="ThunderStudy">
+        <h2 class="footer-title">ThunderStudy</h2>
+        <ul class="footer-links">
+          <li><a href="https://thunderstudy.indevs.in">ThunderStudy</a></li>
+          <li><a href="https://thundertest.indevs.in">CBT Mock</a></li>
+          <li><a href="https://blog.thunderstudy.indevs.in">Blog</a></li>
+          <li><a href="https://thunderstudy.indevs.in/about">Help / Donate</a></li>
+        </ul>
+      </nav>
+
+      <nav aria-label="Support">
+        <h2 class="footer-title">Support</h2>
+        <ul class="footer-links">
+          <li><a href="/faq.html">FAQ</a></li>
+          <li><a href="/new.html">What's New</a></li>
+          <li><a href="https://t.me/Tiny_english_robot" target="_blank" rel="noopener noreferrer">Telegram Bot</a></li>
+          <li><a href="https://wondermayank.in/mail">Mail</a></li>
+          <li><a href="https://wondermayank.in/contact">Contact</a></li>
+        </ul>
+      </nav>
+
+      <nav aria-label="wondermayank">
+        <h2 class="footer-title">wondermayank</h2>
+        <ul class="footer-links">
+          <li><a href="https://make.wondermayank.in">Vibecoding</a></li>
+          <li><a href="https://project.wondermayank.in">Useful Projects</a></li>
+          <li><a href="https://wondermayank.in">Portfolio</a></li>
+          <li><a href="https://blog.wondermayank.indevs.in/">Blog</a></li>
+        </ul>
+      </nav>
+
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="wrap footer-bottom-inner">
+      <div class="footer-copy">© 2026 ThunderStudy by wondermayank. All rights reserved.</div>
+
+      <nav class="footer-legal" aria-label="Legal">
+        <a href="https://wondermayank.in/terms">Terms</a>
+        <a href="https://wondermayank.in/privacy">Privacy</a>
+        <a href="https://wondermayank.in/disclaimer">Disclaimer</a>
+        <a href="/sitemap">Sitemap</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
 <script>
-const $ = s => document.querySelector(s);
-const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let base = '', key = '', tables = [], schema = [], backup = null;
+/* LOADER */
+window.addEventListener('DOMContentLoaded',function(){
+  setTimeout(function(){
+    var loader=document.getElementById('loader');
+    if(loader){ loader.classList.add('hide'); }
+  },200);
+});
+setTimeout(function(){
+  var loader=document.getElementById('loader');
+  if(loader){ loader.classList.add('hide'); }
+},1500);
 
-try { $('#url').value = localStorage.getItem('rc-db-url') || ''; } catch (e) {}
+/* THEME */
+var themeBtn=document.getElementById('themeBtn');
+var sunIcon=document.getElementById('themeIconSun');
+var moonIcon=document.getElementById('themeIconMoon');
+function syncIcons(){
+  var theme=document.documentElement.getAttribute('data-theme');
+  sunIcon.style.display=theme === 'dark' ? 'none' : 'block';
+  moonIcon.style.display=theme === 'dark' ? 'block' : 'none';
+}
+syncIcons();
+themeBtn.addEventListener('click',function(){
+  var next=document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try{ localStorage.setItem('theme', next); }catch(e){}
+  syncIcons();
+});
+</script>
 
-function log(msg, cls) {
-  const el = $('#log');
-  if (el.dataset.fresh !== '0') { el.innerHTML = ''; el.dataset.fresh = '0'; }
-  el.innerHTML += (cls ? '<span class="' + cls + '">' + esc(msg) + '</span>' : esc(msg)) + '\n';
+<script>
+const $ = (id) => document.getElementById(id);
+const API = '/api/admin';
+let TABLES = [];          // [{name, sql, rows, columns:[{name,type,pk}]}]
+let connected = false;
+let busy = false;
+let parsed = null;        // { kind:'json'|'csv', tables:{name:rows[]}, fileName }
+
+const NS = 'http://www.w3.org/2000/svg';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const num = (n) => Number(n || 0).toLocaleString('en-IN');
+
+function log(text, cls) {
+  const el = $('log');
+  if (el.textContent === 'Nothing yet.') el.textContent = '';
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  const icon = cls === 'ok' ? 'u-check' : cls === 'err' ? 'u-x' : '';
+  if (icon) {
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS(NS, 'use');
+    use.setAttribute('href', '#' + icon);
+    svg.appendChild(use);
+    line.appendChild(svg);
+  }
+  const span = document.createElement('span');
+  span.textContent = text;
+  line.appendChild(span);
+  el.appendChild(line);
   el.scrollTop = el.scrollHeight;
 }
 
 async function api(path, opts = {}) {
-  const r = await fetch(base + path, {
-    ...opts,
-    headers: { 'X-Make-Key': key, 'Content-Type': 'application/json' }
+  const r = await fetch(API + path, {
+    method: opts.method || 'GET',
+    headers: { 'Content-Type': 'application/json', 'X-Make-Key': $('key').value.trim() },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
-  return d;
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new Error(j.error || 'HTTP ' + r.status);
+  return j;
 }
 
-function tableRows(list, name, withCounts) {
-  return list.map((t, i) =>
-    '<label class="tbl"><input type="checkbox" class="' + name + '" data-i="' + i + '" checked>' +
-    '<b>' + esc(t.name) + '</b><span>' + t.rows + ' rows</span></label>').join('');
+function setPill(state, text) {
+  const p = $('pill');
+  p.className = 'pill' + (state ? ' ' + state : '');
+  $('pillTxt').textContent = text;
 }
 
-$('#connect').onclick = async () => {
-  base = $('#url').value.trim().replace(/\/+$/, '');
-  key = $('#key').value.trim();
-  if (!/^https?:\/\//.test(base) || !key) { $('#status').textContent = 'Enter the URL and the key.'; return; }
-  $('#status').textContent = 'Connecting…';
+function setProgress(barId, fillId, pct) {
+  $(barId).classList.add('on');
+  $(fillId).style.width = pct + '%';
+}
+function hideProgress(barId, fillId) {
+  setTimeout(() => { $(barId).classList.remove('on'); $(fillId).style.width = '0%'; }, 900);
+}
+
+/* ---------------- connect ---------------- */
+async function connect() {
+  if (busy) return;
+  const key = $('key').value.trim();
+  if (!key) { setPill('no', 'Enter your key first'); return; }
+  try { localStorage.setItem('dbToolKey', key); } catch (e) {}
+  $('connectTxt').textContent = 'Connecting';
   try {
-    const d = await api('/api/admin/tables');
-    tables = d.tables; schema = d.schema;
-    try { localStorage.setItem('rc-db-url', base); } catch (e) {}
-    $('#status').innerHTML = '<span class="ok">Connected. ' + tables.length + ' tables found.</span>';
-    $('#expList').innerHTML = tableRows(tables, 'expChk');
-    $('#work').classList.remove('hide');
-    log('Connected to ' + base, 'ok');
+    const j = await api('/tables');
+    TABLES = j.tables || [];
+    connected = true;
+    setPill('ok', 'Connected');
+    log('Connected. ' + TABLES.length + ' tables found.', 'ok');
   } catch (e) {
-    $('#status').innerHTML = '<span class="bad">' + esc(e.message) + '</span>';
+    connected = false;
+    TABLES = [];
+    setPill('no', e.message);
+    log('Connect failed: ' + e.message, 'err');
   }
-};
-
-function show(tab) {
-  const exp = tab === 'exp';
-  $('#paneExp').classList.toggle('hide', !exp);
-  $('#paneImp').classList.toggle('hide', exp);
-  $('#tabExp').classList.toggle('on', exp);
-  $('#tabImp').classList.toggle('on', !exp);
+  $('connectTxt').textContent = connected ? 'Refresh' : 'Connect';
+  renderTables();
+  refreshButtons();
 }
-$('#tabExp').onclick = () => show('exp');
-$('#tabImp').onclick = () => show('imp');
-$('#expAll').onclick = () => document.querySelectorAll('.expChk').forEach(c => c.checked = true);
-$('#expNone').onclick = () => document.querySelectorAll('.expChk').forEach(c => c.checked = false);
 
-$('#doExport').onclick = async () => {
-  const picked = [...document.querySelectorAll('.expChk')].filter(c => c.checked).map(c => tables[+c.dataset.i]);
-  if (!picked.length) { log('Tick at least one table.', 'bad'); return; }
-  $('#doExport').disabled = true;
+function renderTables() {
+  const total = TABLES.reduce((a, t) => a + t.rows, 0);
+  $('sDb').textContent = connected ? 'wondermayank-rc-db' : 'Not connected';
+  $('sTables').textContent = TABLES.length;
+  $('sRows').textContent = num(total);
+
+  const list = $('expList');
+  list.textContent = '';
+  if (!TABLES.length) {
+    const p = document.createElement('p');
+    p.className = 'hint'; p.style.margin = '0';
+    p.textContent = connected ? 'No tables found in this database.' : 'Connect first to see your tables.';
+    list.appendChild(p);
+  }
+  for (const t of TABLES) {
+    const lab = document.createElement('label');
+    lab.className = 'pick';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = t.name; cb.checked = true;
+    cb.addEventListener('change', refreshButtons);
+    const box = document.createElement('span');
+    box.className = 'box';
+    box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+    const nm = document.createElement('span');
+    nm.className = 'nm';
+    const b = document.createElement('b'); b.textContent = t.name;
+    const s = document.createElement('small'); s.textContent = num(t.rows) + (t.rows === 1 ? ' row' : ' rows');
+    nm.append(b, s);
+    lab.append(cb, box, nm);
+    list.appendChild(lab);
+  }
+
+  const sel = $('csvTable');
+  sel.textContent = '';
+  for (const t of TABLES) {
+    const o = document.createElement('option');
+    o.value = t.name; o.textContent = t.name;
+    sel.appendChild(o);
+  }
+}
+
+const selected = () => [...document.querySelectorAll('#expList input:checked')].map((i) => i.value);
+
+function refreshButtons() {
+  $('expBtn').disabled = busy || !connected || selected().length === 0;
+  const mode = document.querySelector('input[name=mode]:checked').value;
+  const needWipe = mode === 'wipe';
+  $('confirm').classList.toggle('on', needWipe);
+  const confirmed = !needWipe || $('confirmIn').value.trim() === 'WIPE';
+  $('impBtn').disabled = busy || !connected || !parsed || !importPlan().length || !confirmed;
+  $('impBtn').className = (needWipe ? 'danger-btn' : 'primary-btn clay-press');
+}
+
+/* ---------------- export ---------------- */
+const FMT_HINT = {
+  json: 'One file with every selected table. Best for backups and restoring here.',
+  sql: 'One .sql file with CREATE TABLE and INSERT statements. Works with wrangler d1 execute.',
+  csv: 'One CSV file per selected table. Opens in Excel or Google Sheets.',
+};
+
+async function fetchTable(t, onProgress) {
+  const rows = [];
+  const limit = 1000;
+  let offset = 0;
+  while (true) {
+    const j = await api('/export?table=' + encodeURIComponent(t.name) + '&offset=' + offset + '&limit=' + limit);
+    rows.push(...j.rows);
+    offset += j.count;
+    if (onProgress) onProgress(rows.length);
+    if (j.count < limit) break;
+  }
+  return rows;
+}
+
+function csvCell(v) {
+  if (v === null || v === undefined) return '';
+  const s = String(v);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function toCSV(cols, rows) {
+  const out = [cols.map(csvCell).join(',')];
+  for (const r of rows) out.push(cols.map((c) => csvCell(r[c])).join(','));
+  return out.join('\r\n') + '\r\n';
+}
+function sqlVal(v) {
+  if (v === null || v === undefined) return 'NULL';
+  if (typeof v === 'number') return Number.isFinite(v) ? String(v) : 'NULL';
+  return "'" + String(v).replace(/'/g, "''") + "'";
+}
+function toSQL(t, rows) {
+  const cols = t.columns.map((c) => c.name);
+  const head = '"' + t.name + '" (' + cols.map((c) => '"' + c + '"').join(', ') + ')';
+  let create = (t.sql || '').trim();
+  create = create.replace(/^CREATE TABLE\s+(?!IF NOT EXISTS)/i, 'CREATE TABLE IF NOT EXISTS ');
+  const out = ['-- Table: ' + t.name + ' (' + rows.length + ' rows)'];
+  if (create) out.push(create + ';');
+  for (const r of rows) out.push('INSERT INTO ' + head + ' VALUES (' + cols.map((c) => sqlVal(r[c])).join(', ') + ');');
+  return out.join('\n') + '\n';
+}
+
+function download(name, text, mime) {
+  const blob = new Blob([text], { type: mime + ';charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+const stamp = () => new Date().toISOString().slice(0, 16).replace(/[-:T]/g, (m) => (m === 'T' ? '-' : ''));
+
+async function doExport() {
+  const names = selected();
+  if (!names.length || busy) return;
+  busy = true; refreshButtons();
+  const fmt = document.querySelector('input[name=fmt]:checked').value;
+  $('expTxt').textContent = 'Exporting';
+  $('expMsg').textContent = '';
+  setProgress('expBar', 'expFill', 0);
+  const data = {};
+  let failed = false;
   try {
-    const out = { format: 'rc-db-backup', version: 1, exported_at: new Date().toISOString(), source: base, schema: $('#expSchema').checked ? schema : [], tables: {} };
-    for (const t of picked) {
-      const objs = [];
-      let offset = 0;
-      for (;;) {
-        const d = await api('/api/admin/export?table=' + encodeURIComponent(t.name) + '&offset=' + offset + '&limit=500');
-        objs.push(...d.rows);
-        offset += d.rows.length;
-        log(t.name + ': ' + offset + ' / ' + t.rows);
-        if (d.rows.length < 500) break;
+    for (let i = 0; i < names.length; i++) {
+      const t = TABLES.find((x) => x.name === names[i]);
+      $('expMsg').textContent = 'Reading ' + t.name + '…';
+      const rows = await fetchTable(t, (n) => { $('expMsg').textContent = 'Reading ' + t.name + ' (' + num(n) + ')…'; });
+      data[t.name] = { t, rows };
+      log(t.name + ': ' + num(rows.length) + ' rows read', 'ok');
+      setProgress('expBar', 'expFill', Math.round(((i + 1) / names.length) * 100));
+    }
+    const ts = stamp();
+    if (fmt === 'json') {
+      const out = { app: 'wondermayank-rc-db', version: 1, exported_at: new Date().toISOString(), tables: {} };
+      for (const n of names) out.tables[n] = { columns: data[n].t.columns.map((c) => c.name), rows: data[n].rows };
+      download('rc-db-backup-' + ts + '.json', JSON.stringify(out, null, 1), 'application/json');
+    } else if (fmt === 'sql') {
+      const head = '-- WonderMayank RC D1 export, ' + new Date().toISOString() + '\n\n';
+      download('rc-db-' + ts + '.sql', head + names.map((n) => toSQL(data[n].t, data[n].rows)).join('\n'), 'application/sql');
+    } else {
+      for (const n of names) {
+        download(n + '-' + ts + '.csv', toCSV(data[n].t.columns.map((c) => c.name), data[n].rows), 'text/csv');
+        await sleep(350);
       }
-      const columns = objs.length ? Object.keys(objs[0]) : [];
-      out.tables[t.name] = { columns, rows: objs.map(o => columns.map(c => o[c])) };
     }
-    const blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'rc-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-    a.click();
-    log('Done. File downloaded: ' + a.download, 'ok');
-  } catch (e) { log('Export failed: ' + e.message, 'bad'); }
-  $('#doExport').disabled = false;
+    $('expMsg').textContent = 'Done. ' + names.length + (names.length === 1 ? ' table' : ' tables') + ' exported.';
+    log('Export finished (' + fmt.toUpperCase() + ')', 'ok');
+  } catch (e) {
+    failed = true;
+    $('expMsg').textContent = 'Failed: ' + e.message;
+    log('Export failed: ' + e.message, 'err');
+  }
+  busy = false;
+  $('expTxt').textContent = 'Export';
+  hideProgress('expBar', 'expFill');
+  refreshButtons();
+}
+
+/* ---------------- parse files ---------------- */
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = [];
+  let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell); cell = '';
+      if (row.length > 1 || row[0] !== '') rows.push(row);
+      row = [];
+    } else cell += c;
+  }
+  if (cell !== '' || row.length) { row.push(cell); if (row.length > 1 || row[0] !== '') rows.push(row); }
+  if (!rows.length) return [];
+  const head = rows[0].map((h) => h.trim());
+  return rows.slice(1).map((r) => {
+    const o = {};
+    head.forEach((h, i) => { o[h] = r[i] === undefined || r[i] === '' ? null : r[i]; });
+    return o;
+  });
+}
+
+async function readFile(f) {
+  parsed = null;
+  $('found').textContent = '';
+  $('csvTarget').classList.add('hidden');
+  $('impOpts').classList.add('hidden');
+  $('impMsg').textContent = '';
+  if (!f) { refreshButtons(); return; }
+  $('dropTitle').textContent = f.name;
+  $('dropSub').textContent = (f.size / 1024).toFixed(1) + ' KB';
+  const text = await f.text();
+  const isCSV = /\.csv$/i.test(f.name);
+  try {
+    if (isCSV) {
+      const rows = parseCSV(text);
+      if (!rows.length) throw new Error('No rows found in this CSV');
+      const guess = TABLES.find((t) => f.name.toLowerCase().startsWith(t.name.toLowerCase()));
+      parsed = { kind: 'csv', fileName: f.name, tables: { __csv__: rows } };
+      if (guess) $('csvTable').value = guess.name;
+      $('csvTarget').classList.remove('hidden');
+    } else {
+      const j = JSON.parse(text);
+      let tables = {};
+      if (j && j.tables && typeof j.tables === 'object') {
+        for (const [n, v] of Object.entries(j.tables)) tables[n] = Array.isArray(v) ? v : (v.rows || []);
+      } else if (j && j.table && Array.isArray(j.rows)) {
+        tables[j.table] = j.rows;
+      } else if (Array.isArray(j)) {
+        parsed = { kind: 'csv', fileName: f.name, tables: { __csv__: j } };
+        $('csvTarget').classList.remove('hidden');
+      } else throw new Error('Unrecognised JSON. Use a backup made by this tool.');
+      if (!parsed) parsed = { kind: 'json', fileName: f.name, tables };
+    }
+    log('Loaded ' + f.name, 'ok');
+  } catch (e) {
+    parsed = null;
+    log('Could not read ' + f.name + ': ' + e.message, 'err');
+    $('found').innerHTML = '';
+    const d = document.createElement('div');
+    d.className = 'found-row';
+    const s = document.createElement('span'); s.className = 'bad'; s.textContent = e.message;
+    d.appendChild(s);
+    $('found').appendChild(d);
+  }
+  renderPlan();
+}
+
+function importPlan() {
+  if (!parsed) return [];
+  if (parsed.kind === 'csv') {
+    const name = $('csvTable').value;
+    return name ? [{ name, rows: parsed.tables.__csv__ }] : [];
+  }
+  return Object.entries(parsed.tables)
+    .filter(([n]) => TABLES.some((t) => t.name === n))
+    .map(([name, rows]) => ({ name, rows }));
+}
+
+function renderPlan() {
+  const box = $('found');
+  box.textContent = '';
+  if (parsed) {
+    const names = parsed.kind === 'csv' ? [{ name: $('csvTable').value || '(pick a table)', rows: parsed.tables.__csv__, ok: !!$('csvTable').value }]
+      : Object.entries(parsed.tables).map(([name, rows]) => ({ name, rows, ok: TABLES.some((t) => t.name === name) }));
+    for (const p of names) {
+      const d = document.createElement('div');
+      d.className = 'found-row';
+      const a = document.createElement('span'); a.textContent = p.name;
+      const b = document.createElement('small');
+      b.textContent = num(p.rows.length) + ' rows' + (p.ok ? '' : ' - not in database, will be skipped');
+      if (!p.ok) b.className = 'bad';
+      d.append(a, b);
+      box.appendChild(d);
+    }
+    if (!connected) {
+      const n = document.createElement('div');
+      n.className = 'notice';
+      n.innerHTML = '<svg aria-hidden="true"><use href="#u-alert"/></svg>';
+      const sp = document.createElement('span'); sp.textContent = 'Connect above to enable importing.';
+      n.appendChild(sp);
+      box.appendChild(n);
+    }
+  }
+  $('impOpts').classList.toggle('hidden', !parsed);
+  refreshButtons();
+}
+
+/* ---------------- import ---------------- */
+const MODE_HINT = {
+  ignore: 'Only new rows are added. Existing rows are left alone.',
+  replace: 'Rows with the same id are overwritten. New rows are added. Nothing is deleted.',
+  wipe: 'Deletes all rows in the table, then imports the file. Use this to restore a backup exactly.',
 };
 
-$('#file').onchange = async e => {
-  const f = e.target.files[0];
-  if (!f) return;
+async function doImport() {
+  const plan = importPlan();
+  if (!plan.length || busy) return;
+  const mode = document.querySelector('input[name=mode]:checked').value;
+  busy = true; refreshButtons();
+  $('impTxt').textContent = 'Importing';
+  $('impMsg').textContent = '';
+  const total = plan.reduce((a, p) => a + p.rows.length, 0);
+  let done = 0, skipped = 0;
+  setProgress('impBar', 'impFill', 0);
+  const CHUNK = 200;
   try {
-    backup = JSON.parse(await f.text());
-    if (backup.format !== 'rc-db-backup') throw new Error('This is not a backup made by this tool.');
-    const list = Object.keys(backup.tables).map(n => ({ name: n, rows: backup.tables[n].rows.length }));
-    $('#impList').innerHTML = tableRows(list, 'impChk');
-    $('#impList').dataset.names = JSON.stringify(list.map(x => x.name));
-    $('#impOpts').classList.remove('hide');
-    log('Loaded ' + f.name + ' (from ' + (backup.source || 'unknown') + ', ' + backup.exported_at + ')', 'ok');
-  } catch (err) { backup = null; $('#impOpts').classList.add('hide'); log(err.message, 'bad'); }
-};
-
-$('#doImport').onclick = async () => {
-  if (!backup) return;
-  const names = JSON.parse($('#impList').dataset.names);
-  const picked = [...document.querySelectorAll('.impChk')].filter(c => c.checked).map(c => names[+c.dataset.i]);
-  if (!picked.length) { log('Tick at least one table.', 'bad'); return; }
-  const replace = document.querySelector('input[name=mode]:checked').value === 'replace';
-  if (!confirm('Import into ' + base + '?\n\n' + picked.join(', ') + '\nMode: ' + (replace ? 'REPLACE (existing rows in these tables are deleted first)' : 'MERGE'))) return;
-  $('#doImport').disabled = true;
-  try {
-    if ($('#impSchema').checked && backup.schema && backup.schema.length) {
-      await api('/api/admin/import', { method: 'POST', body: JSON.stringify({ schema: backup.schema }) });
-      log('Tables and indexes checked / created.', 'ok');
-    }
-    for (const n of picked) {
-      const { columns, rows } = backup.tables[n];
-      if (!rows.length) {
-        if (replace) await api('/api/admin/import', { method: 'POST', body: JSON.stringify({ table: n, columns: [], rows: [], replace: true }) });
-        log(n + ': 0 rows');
+    for (const p of plan) {
+      let first = true;
+      if (mode === 'wipe' && p.rows.length === 0) {
+        await api('/import', { method: 'POST', body: { table: p.name, mode: 'ignore', wipe: true, rows: [] } });
+        log(p.name + ': emptied', 'ok');
         continue;
       }
-      for (let i = 0; i < rows.length; i += 50) {
-        await api('/api/admin/import', { method: 'POST', body: JSON.stringify({
-          table: n, columns, rows: rows.slice(i, i + 50), replace: replace && i === 0 }) });
-        log(n + ': ' + Math.min(i + 50, rows.length) + ' / ' + rows.length);
+      for (let i = 0; i < p.rows.length; i += CHUNK) {
+        const rows = p.rows.slice(i, i + CHUNK);
+        $('impMsg').textContent = 'Importing ' + p.name + ' (' + num(Math.min(i + CHUNK, p.rows.length)) + ' / ' + num(p.rows.length) + ')…';
+        const j = await api('/import', {
+          method: 'POST',
+          body: { table: p.name, mode: mode === 'wipe' ? 'replace' : mode, wipe: mode === 'wipe' && first, rows },
+        });
+        first = false;
+        skipped += j.skipped || 0;
+        done += rows.length;
+        setProgress('impBar', 'impFill', Math.round((done / Math.max(total, 1)) * 100));
       }
-      log(n + ' done', 'ok');
+      log(p.name + ': ' + num(p.rows.length) + ' rows sent', 'ok');
     }
-    log('Import finished.', 'ok');
-  } catch (e) { log('Import failed: ' + e.message, 'bad'); }
-  $('#doImport').disabled = false;
-};
+    $('impMsg').textContent = 'Done. ' + num(done) + ' rows processed' + (skipped ? ', ' + skipped + ' empty rows skipped' : '') + '.';
+    log('Import finished', 'ok');
+    await connect();
+  } catch (e) {
+    $('impMsg').textContent = 'Failed: ' + e.message;
+    log('Import failed: ' + e.message + ' (rows already sent stay in the database)', 'err');
+  }
+  busy = false;
+  $('impTxt').textContent = 'Import';
+  hideProgress('impBar', 'impFill');
+  $('confirmIn').value = '';
+  refreshButtons();
+}
+
+/* ---------------- wire up ---------------- */
+$('connectBtn').addEventListener('click', connect);
+$('key').addEventListener('keydown', (e) => { if (e.key === 'Enter') connect(); });
+$('selAll').addEventListener('click', () => { document.querySelectorAll('#expList input').forEach((i) => (i.checked = true)); refreshButtons(); });
+$('selNone').addEventListener('click', () => { document.querySelectorAll('#expList input').forEach((i) => (i.checked = false)); refreshButtons(); });
+document.querySelectorAll('input[name=fmt]').forEach((r) => r.addEventListener('change', () => { $('fmtHint').textContent = FMT_HINT[r.value]; }));
+document.querySelectorAll('input[name=mode]').forEach((r) => r.addEventListener('change', () => { $('modeHint').textContent = MODE_HINT[r.value]; refreshButtons(); }));
+$('confirmIn').addEventListener('input', refreshButtons);
+$('csvTable').addEventListener('change', renderPlan);
+$('expBtn').addEventListener('click', doExport);
+$('impBtn').addEventListener('click', doImport);
+$('file').addEventListener('change', (e) => readFile(e.target.files[0]));
+const drop = $('drop');
+['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', (e) => { if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); });
+
+try { $('key').value = localStorage.getItem('dbToolKey') || localStorage.getItem('makeKey') || ''; } catch (e) {}
+if ($('key').value) connect(); else refreshButtons();
 </script>
 </body>
 </html>
