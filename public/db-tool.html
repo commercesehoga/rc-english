@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RC Database Export / Import</title>
+<style>
+:root{
+  --bg:#f3f6fc; --card:#ffffff; --ink:#14203a; --mute:#5b6b8c; --line:#d9e1f1;
+  --accent:#4f7cf0; --accent-ink:#ffffff; --ok:#1c8a4f; --bad:#c23a3a; --code:#eef3fd;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0e1424; --card:#161e33; --ink:#e6ecfa; --mute:#8fa0c4; --line:#27324f;
+    --accent:#7aa2ff; --accent-ink:#0e1424; --ok:#4cc386; --bad:#ff7b7b; --code:#1b2540;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:20px}
+main{max-width:760px;margin:0 auto;display:grid;gap:16px}
+h1{font-size:22px;margin:0 0 2px}
+p.sub{margin:0;color:var(--mute)}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+h2{font-size:15px;margin:0 0 10px}
+label.f{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+input[type=text],input[type=password],input[type=url]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit}
+button{font:inherit;border:0;border-radius:9px;padding:10px 16px;background:var(--accent);color:var(--accent-ink);font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--accent);border:1px solid var(--line);font-weight:500;padding:6px 12px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.tabs{display:flex;gap:6px}
+.tabs button{background:transparent;color:var(--mute);border:1px solid var(--line);font-weight:500}
+.tabs button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tbl{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;margin-top:8px;cursor:pointer}
+.tbl input{width:18px;height:18px;accent-color:var(--accent)}
+.tbl b{flex:1;font-weight:600;word-break:break-all}
+.tbl span{color:var(--mute);font-size:13px}
+.opt{display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:14px}
+.opt input{margin-top:3px;accent-color:var(--accent)}
+#log{background:var(--code);border-radius:9px;padding:10px 12px;font:13px/1.55 ui-monospace,Consolas,monospace;max-height:220px;overflow:auto;white-space:pre-wrap;min-height:44px}
+.ok{color:var(--ok)} .bad{color:var(--bad)}
+.hide{display:none}
+.note{font-size:13px;color:var(--mute);margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>RC Database: Export &amp; Import</h1>
+    <p class="sub">Tick the tables you want. Move data between two deployments of the English RC Worker.</p>
+  </div>
+
+  <section>
+    <h2>1. Connect to a Worker</h2>
+    <label class="f" for="url">Worker / site URL (the one you want to export from or import into)</label>
+    <input id="url" type="url" placeholder="https://english.thunderstudy.indevs.in">
+    <label class="f" for="key">MAKE_KEY (the secret set on that Worker)</label>
+    <input id="key" type="password" placeholder="your MAKE_KEY" autocomplete="off">
+    <div class="row">
+      <button id="connect">Connect</button>
+      <span id="status" class="note"></span>
+    </div>
+  </section>
+
+  <section id="work" class="hide">
+    <div class="tabs">
+      <button id="tabExp" class="on">Export</button>
+      <button id="tabImp">Import</button>
+    </div>
+
+    <div id="paneExp">
+      <h2 style="margin-top:14px">2. Choose tables to export</h2>
+      <div class="row" style="margin-top:0">
+        <button class="ghost" id="expAll">Select all</button>
+        <button class="ghost" id="expNone">Select none</button>
+      </div>
+      <div id="expList"></div>
+      <label class="opt"><input type="checkbox" id="expSchema" checked><span>Include table structure (so the other database can create the tables itself)</span></label>
+      <div class="row"><button id="doExport">Export to file</button></div>
+    </div>
+
+    <div id="paneImp" class="hide">
+      <h2 style="margin-top:14px">2. Choose a backup file</h2>
+      <input type="file" id="file" accept=".json,application/json">
+      <div id="impList"></div>
+      <div id="impOpts" class="hide">
+        <label class="opt"><input type="radio" name="mode" value="replace" checked><span><b>Replace</b>: empty each ticked table first, then load the file</span></label>
+        <label class="opt"><input type="radio" name="mode" value="merge"><span><b>Merge</b>: keep what is already there, add or update rows from the file</span></label>
+        <label class="opt"><input type="checkbox" id="impSchema" checked><span>Create missing tables first</span></label>
+        <div class="row"><button id="doImport">Import into this Worker</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Progress</h2>
+    <div id="log">Waiting…</div>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let base = '', key = '', tables = [], schema = [], backup = null;
+
+try { $('#url').value = localStorage.getItem('rc-db-url') || ''; } catch (e) {}
+
+function log(msg, cls) {
+  const el = $('#log');
+  if (el.dataset.fresh !== '0') { el.innerHTML = ''; el.dataset.fresh = '0'; }
+  el.innerHTML += (cls ? '<span class="' + cls + '">' + esc(msg) + '</span>' : esc(msg)) + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+async function api(path, opts = {}) {
+  const r = await fetch(base + path, {
+    ...opts,
+    headers: { 'X-Make-Key': key, 'Content-Type': 'application/json' }
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+  return d;
+}
+
+function tableRows(list, name, withCounts) {
+  return list.map((t, i) =>
+    '<label class="tbl"><input type="checkbox" class="' + name + '" data-i="' + i + '" checked>' +
+    '<b>' + esc(t.name) + '</b><span>' + t.rows + ' rows</span></label>').join('');
+}
+
+$('#connect').onclick = async () => {
+  base = $('#url').value.trim().replace(/\/+$/, '');
+  key = $('#key').value.trim();
+  if (!/^https?:\/\//.test(base) || !key) { $('#status').textContent = 'Enter the URL and the key.'; return; }
+  $('#status').textContent = 'Connecting…';
+  try {
+    const d = await api('/api/admin/tables');
+    tables = d.tables; schema = d.schema;
+    try { localStorage.setItem('rc-db-url', base); } catch (e) {}
+    $('#status').innerHTML = '<span class="ok">Connected. ' + tables.length + ' tables found.</span>';
+    $('#expList').innerHTML = tableRows(tables, 'expChk');
+    $('#work').classList.remove('hide');
+    log('Connected to ' + base, 'ok');
+  } catch (e) {
+    $('#status').innerHTML = '<span class="bad">' + esc(e.message) + '</span>';
+  }
+};
+
+function show(tab) {
+  const exp = tab === 'exp';
+  $('#paneExp').classList.toggle('hide', !exp);
+  $('#paneImp').classList.toggle('hide', exp);
+  $('#tabExp').classList.toggle('on', exp);
+  $('#tabImp').classList.toggle('on', !exp);
+}
+$('#tabExp').onclick = () => show('exp');
+$('#tabImp').onclick = () => show('imp');
+$('#expAll').onclick = () => document.querySelectorAll('.expChk').forEach(c => c.checked = true);
+$('#expNone').onclick = () => document.querySelectorAll('.expChk').forEach(c => c.checked = false);
+
+$('#doExport').onclick = async () => {
+  const picked = [...document.querySelectorAll('.expChk')].filter(c => c.checked).map(c => tables[+c.dataset.i]);
+  if (!picked.length) { log('Tick at least one table.', 'bad'); return; }
+  $('#doExport').disabled = true;
+  try {
+    const out = { format: 'rc-db-backup', version: 1, exported_at: new Date().toISOString(), source: base, schema: $('#expSchema').checked ? schema : [], tables: {} };
+    for (const t of picked) {
+      const objs = [];
+      let offset = 0;
+      for (;;) {
+        const d = await api('/api/admin/export?table=' + encodeURIComponent(t.name) + '&offset=' + offset + '&limit=500');
+        objs.push(...d.rows);
+        offset += d.rows.length;
+        log(t.name + ': ' + offset + ' / ' + t.rows);
+        if (d.rows.length < 500) break;
+      }
+      const columns = objs.length ? Object.keys(objs[0]) : [];
+      out.tables[t.name] = { columns, rows: objs.map(o => columns.map(c => o[c])) };
+    }
+    const blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'rc-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    log('Done. File downloaded: ' + a.download, 'ok');
+  } catch (e) { log('Export failed: ' + e.message, 'bad'); }
+  $('#doExport').disabled = false;
+};
+
+$('#file').onchange = async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    backup = JSON.parse(await f.text());
+    if (backup.format !== 'rc-db-backup') throw new Error('This is not a backup made by this tool.');
+    const list = Object.keys(backup.tables).map(n => ({ name: n, rows: backup.tables[n].rows.length }));
+    $('#impList').innerHTML = tableRows(list, 'impChk');
+    $('#impList').dataset.names = JSON.stringify(list.map(x => x.name));
+    $('#impOpts').classList.remove('hide');
+    log('Loaded ' + f.name + ' (from ' + (backup.source || 'unknown') + ', ' + backup.exported_at + ')', 'ok');
+  } catch (err) { backup = null; $('#impOpts').classList.add('hide'); log(err.message, 'bad'); }
+};
+
+$('#doImport').onclick = async () => {
+  if (!backup) return;
+  const names = JSON.parse($('#impList').dataset.names);
+  const picked = [...document.querySelectorAll('.impChk')].filter(c => c.checked).map(c => names[+c.dataset.i]);
+  if (!picked.length) { log('Tick at least one table.', 'bad'); return; }
+  const replace = document.querySelector('input[name=mode]:checked').value === 'replace';
+  if (!confirm('Import into ' + base + '?\n\n' + picked.join(', ') + '\nMode: ' + (replace ? 'REPLACE (existing rows in these tables are deleted first)' : 'MERGE'))) return;
+  $('#doImport').disabled = true;
+  try {
+    if ($('#impSchema').checked && backup.schema && backup.schema.length) {
+      await api('/api/admin/import', { method: 'POST', body: JSON.stringify({ schema: backup.schema }) });
+      log('Tables and indexes checked / created.', 'ok');
+    }
+    for (const n of picked) {
+      const { columns, rows } = backup.tables[n];
+      if (!rows.length) {
+        if (replace) await api('/api/admin/import', { method: 'POST', body: JSON.stringify({ table: n, columns: [], rows: [], replace: true }) });
+        log(n + ': 0 rows');
+        continue;
+      }
+      for (let i = 0; i < rows.length; i += 50) {
+        await api('/api/admin/import', { method: 'POST', body: JSON.stringify({
+          table: n, columns, rows: rows.slice(i, i + 50), replace: replace && i === 0 }) });
+        log(n + ': ' + Math.min(i + 50, rows.length) + ' / ' + rows.length);
+      }
+      log(n + ' done', 'ok');
+    }
+    log('Import finished.', 'ok');
+  } catch (e) { log('Import failed: ' + e.message, 'bad'); }
+  $('#doImport').disabled = false;
+};
+</script>
+</body>
+</html>
